@@ -1,24 +1,11 @@
-"""Learning-Augmented Bit-Model Caching -- 论文三个算法的实现。
-
-Bit Model（cost = size = w_p）
-与项目中已有的 ``fractional`` / ``bit_rounding``（启发式舍入）不同，本模块维护
-论文所述的 **缓存状态分布 µ**：µ 是一组 (D, m) 对，D 为“被驱逐页面集合”，m 为概率
-质量（Σ m = 1）。物理缓存为 ``B(t) \\ D_η``，其中 η 是一次性采样的均匀随机数，
-D_η 是 µ 中包含 η 的那个区间对应的集合 D。驱逐通过对分布做 RoundIncrease /
-RoundDecrease 完成，而非一次驱逐一个页面--因此本算法不兼容
-``EvictionPolicy.select_victim`` 接口，而是自带顶层循环（Algorithm 3）。
-
-常量（论文 2.4 节 "Global state and invariants"）：
+"""Learning-Augmented Bit-Model Caching
+常量（ 2.4 节 "Global state and invariants"）：
   - γ = 3（Bit 模型），y_p = min(1, γ·x_p)。
   - β = 10（舍入代价因子，Lemma 2）。
   - U = ⌈log₂ k⌉（最大 size class 上界）。
   - size class S(i) = {p : 2ⁱ ≤ w_p < 2ⁱ⁺¹}，cls(p) = ⌊log₂ w_p⌋。
   - Bit 模型下 c_p = w_p。
 
-代价记账（重要）：Algorithm 2 中 “pay m·w_p / m̂·w_q” 是 Lemma 2 分析所用的
-**期望舍入代价**（对 η 取期望），本实现单独记入 ``rounding_cost`` 供诊断。
-真正上报的 bit-model 取回代价按 Algorithm 3 第 8 行，由 cache(η) 状态差
-``cache_after \\ cache_before`` 计算（对单次 η 的实现代价）。
 
 对论文伪代码中三处不可避免的歧义，本实现采取以下解读（代码内对应位置均有注释）：
   1. Algorithm 2 的 RoundDecrease 标注 “repair bottom-up”--实现为与 RoundIncrease
@@ -419,6 +406,12 @@ class BitModelOnline:
 
             # ---- 第 6 行：FractionalServe(p_t) ----
             misses += 1
+            # 论文隐含假设 w_p ≤ k（页面可放入缓存）。若 w_p > k，页面永远无法缓存：
+            # 计为未命中、支付取回代价 w_p，但不纳入 B(t) 也不更新分布，避免破坏
+            # validity 不变式（否则 p_t 会以 size>k 进入 cache(η)）。
+            if size > self.k:
+                self.fetch_cost += float(size)
+                continue
             # 新页面纳入 B(t)（B(t) = B(t-1) ∪ {p_t}）；已存在则保留其 w/x/y
             if obj_id not in self.B:
                 self.B.add(obj_id)

@@ -89,6 +89,9 @@ class ContentCache:
     def _admit(self, obj_id: int, size: int, next_seq: float,
                ctx: AccessContext) -> None:
         """驱逐至剩余空间足够后接纳新对象。对象大于总容量时不接纳。"""
+        # 对象大于总容量时无法缓存：不驱逐任何页面（驱逐也无济于事），直接丢弃。
+        if size > self.capacity:
+            return
         ctx.needed = max(0.0, size - self.remain)
         while size > self.remain and self._objects:
             candidates = list(self._objects.keys())
