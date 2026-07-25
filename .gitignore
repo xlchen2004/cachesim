@@ -18,7 +18,14 @@ results/
 .idea/
 .vscode/
 .claude/
+.codebuddy/
 
+# 测试文件
+tests/
+test_*.py
+*_test.py
+
+# trace数据集
 traces/
 Learning-Augmented Bit-Model Caching.pdf
 项目设计.md
