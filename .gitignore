@@ -17,5 +17,6 @@ results/
 # IDE
 .idea/
 .vscode/
+.claude/
 
-traces/
+traces/twitter29_all.csv

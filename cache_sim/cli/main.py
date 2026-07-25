@@ -17,8 +17,9 @@ from typing import List, Optional
 
 from cache_sim.algorithms.registry import get_algorithm, list_algorithms
 from cache_sim.config.loader import load_config
-from cache_sim.datasets.loader import check_trace, find_dataset_path, iter_requests
-from cache_sim.datasets.synthetic import SyntheticGenerator
+from cache_sim.traceparser.basic_trace import generate_basic_trace
+from cache_sim.traceparser.loader import check_trace, find_dataset_path, iter_requests
+from cache_sim.traceparser.tracegenerator import SyntheticGenerator
 from cache_sim.engine.simulator import (
     BitModelOnlineSimulator, ContentSimulator,
     compute_bit_cost_ratio, compute_competitive_ratio,
@@ -193,31 +194,33 @@ def run_config(args) -> None:
 def run_gen_trace(argv: List[str]) -> None:
     parser = argparse.ArgumentParser(
         prog="cache_sim gen-trace",
-        description="生成 Pareto（Zipf-like）流行度 + Bounded-Pareto 大小的对象级 trace。")
+        description="生成 basic_trace（Pareto/Bounded-Pareto）对象级 trace，"
+                    "忠实复现 basic_trace.cc。")
     parser.add_argument("--num-objects", type=int, default=1000,
-                        help="不同对象数量（默认 1000）")
+                        help="不同对象数量 no_objs（默认 1000）")
     parser.add_argument("--popular-requests", type=int, default=10000,
-                        help="最热门对象被请求的次数（默认 10000，总长为其倍数）")
+                        help="重复计数 / 时间上界 reps（默认 10000）；最热门对象（i=0，"
+                             "速率 1）约产生此次数请求，总请求数为其 H_{no_objs,0.9} 倍")
     parser.add_argument("--pareto-shape", type=float, default=1.8,
-                        help="Pareto/Zipf 流行度形状参数 α（默认 1.8）")
-    parser.add_argument("--min-size", type=int, default=1, help="最小对象大小（默认 1）")
-    parser.add_argument("--max-size", type=int, default=10000, help="最大对象大小（默认 10000）")
-    parser.add_argument("--size-shape", type=float, default=1.0,
-                        help="Bounded-Pareto 大小分布形状（默认 1.0）")
+                        help="Bounded-Pareto 大小形状参数 α shape（默认 1.8）")
+    parser.add_argument("--min-size", type=int, default=1,
+                        help="对象大小下界 lowerb（默认 1）")
+    parser.add_argument("--max-size", type=int, default=10000,
+                        help="对象大小上界 higherb（默认 10000）")
     parser.add_argument("-o", "--output", type=str, required=True, help="输出 trace 文件路径")
-    parser.add_argument("--seed", type=int, default=None, help="随机种子")
+    parser.add_argument("--seed", type=int, default=None,
+                        help="随机种子（默认 None，等价原 C++ 的 random_device 非确定性）")
     args = parser.parse_args(argv)
 
-    trace = SyntheticGenerator.basic_trace(
-        num_objects=args.num_objects, popular_requests=args.popular_requests,
-        pareto_shape=args.pareto_shape, min_size=args.min_size, max_size=args.max_size,
-        output_path=args.output, seed=args.seed, size_shape=args.size_shape)
-    n = len(trace) if trace else None
-    # 写文件时 trace 为空，用 check_trace 统计
+    generate_basic_trace(
+        no_objs=args.num_objects, reps=args.popular_requests,
+        shape=args.pareto_shape, lowerb=args.min_size, higherb=args.max_size,
+        output_path=args.output, seed=args.seed, verbose=True)
+    # 写文件后用 check_trace 统计并校验输出格式
     stats = check_trace(args.output)
     print(f"已生成 trace: {args.output}")
-    print(f"  对象数: {args.num_objects}, 流行度形状: {args.pareto_shape}, "
-          f"大小: [{args.min_size}, {args.max_size}]")
+    print(f"  对象数: {args.num_objects}, reps: {args.popular_requests}, "
+          f"大小形状 α: {args.pareto_shape}, 大小: [{args.min_size}, {args.max_size}]")
     print(f"  请求数: {stats['num_requests']}, 唯一对象: {stats['num_unique_objects']}, "
           f"总字节: {stats['total_bytes']}, 大小范围: "
           f"[{stats['min_size']}, {stats['max_size']}]")

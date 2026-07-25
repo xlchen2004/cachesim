@@ -37,7 +37,7 @@ class ContentSimulator:
     seq 由模拟器按请求序生成（time 列当前未使用，留待未来 TTL）。
 
     trace 的完整性检查在启动时由调用方（CLI / ExperimentRunner）通过
-    :func:`cache_sim.datasets.check_trace` 完成；读取器本身亦逐行内联校验。
+    :func:`cache_sim.traceparser.check_trace` 完成；读取器本身亦逐行内联校验。
     """
 
     def __init__(self, policy: EvictionPolicy, capacity: int,

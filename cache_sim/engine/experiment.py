@@ -11,8 +11,8 @@ from typing import Callable, List, Optional
 from cache_sim.algorithms.registry import get_algorithm
 from cache_sim.config.schema import AlgorithmConfig, DatasetConfig, ExperimentConfig
 from cache_sim.core.models import SimulationResult
-from cache_sim.datasets.loader import check_trace, find_dataset_path, iter_requests
-from cache_sim.datasets.synthetic import SyntheticGenerator
+from cache_sim.traceparser.loader import check_trace, find_dataset_path, iter_requests
+from cache_sim.traceparser.tracegenerator import SyntheticGenerator
 from cache_sim.engine.simulator import (
     BitModelOnlineSimulator, ContentSimulator,
     compute_bit_cost_ratio, compute_competitive_ratio,
