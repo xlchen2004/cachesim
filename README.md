@@ -46,20 +46,7 @@ cachesim/
 ### 环境要求
 
 - Python 3.10+
-- 可选: PyYAML (`pip install pyyaml`) — 用于 YAML 配置文件
 
-### 安装
-
-```bash
-git clone <repo-url>
-cd cachesim
-```
-
-无需额外安装依赖即可运行（标准库 only）。如需 YAML 配置支持:
-
-```bash
-pip install pyyaml
-```
 
 ### 基本用法
 
@@ -94,10 +81,7 @@ python -m cache_sim --algorithm lru --dataset traces/twitter29_test10.csv \
 
 ```bash
 # 生成 basic_trace (Pareto 流行度 + Bounded-Pareto 对象大小)
-python -m cache_sim gen-trace \
-    --num-objects 1000 --popular-requests 10000 --pareto-shape 1.8 \
-    --min-size 1 --max-size 10000 \
-    -o traces/my_trace.tr --seed 42
+python -m cache_sim gen-trace --num-objects 1000 --popular-requests 10000 --pareto-shape 1.8 --min-size 1 --max-size 10000 -o traces/my_trace.tr --seed 42
 ```
 
 #### Trace 完整性检查
@@ -148,9 +132,7 @@ python -m cache_sim --config experiment.json
 ### 1. 模拟模式
 
 ```bash
-python -m cache_sim [options]            # 单次模拟（需 --algorithm）
-python -m cache_sim --config <file>      # 批量实验
-python -m cache_sim --list-algorithms    # 列出算法后退出
+python -m cache_sim [options]            # 单次模拟
 ```
 
 | 参数 | 短选项 | 类型 | 取值 / 范围 | 默认值 | 说明 |
@@ -206,7 +188,7 @@ python -m cache_sim check-trace <path> [--max-lines N]
 
 ## Trace 数据格式
 
-对象级缓存 trace 为空格分隔的文本格式，每行一条请求:
+ trace 数据集需组织为空格分隔的格式，每行一条请求格式如下:
 
 ```
 time id size [extra...]
@@ -240,7 +222,7 @@ time id size [extra...]
 | Belady | 离线 | `belady` | 驱逐下次使用最远的项（最优离线基准） |
 | Bit-Model Online | 在线 | `bit_model_online` | Learning-Augmented 论文算法（维护缓存状态分布 µ） |
 
-### 成本模型
+### 模型
 
 - `bit` (默认): cost = size（按字节计代价）
 - `fault`: cost = 1（每次未命中代价相同）
@@ -274,12 +256,6 @@ time id size [extra...]
 | LRU | 5000 | 0.0771 | 0.0573 | 1.161 |
 | FIFO | 5000 | 0.0751 | 0.0561 | 1.164 |
 
-结论:
-- Belady 离线最优算法获得最高命中率 ✓
-- 在线算法中 LFU > LRU > FIFO，符合预期 ✓
-- 更大的缓存容量带来更高的命中率 ✓
-- 所有在线算法竞争比 > 1.0 ✓
-- 字节命中率 (BHR) 始终低于对象命中率 (OHR)，大对象更难缓存 ✓
 
 ## 扩展新算法
 
