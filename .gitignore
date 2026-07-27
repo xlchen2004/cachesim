@@ -26,6 +26,7 @@ test_*.py
 *_test.py
 
 # trace数据集
-traces
+traces/twitter29.csv
+traces/twitter45.csv
 Learning-Augmented Bit-Model Caching.pdf
 项目设计.md
