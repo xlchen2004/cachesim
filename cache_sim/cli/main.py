@@ -36,7 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--algorithm", "-a", type=str, default=None,
                         help=f"算法名称（可选: {', '.join(list_algorithms())}）")
     parser.add_argument("--dataset", "-d", type=str, default=None,
-                        help="数据集文件路径、名称（如 twitter29）或 'synthetic'")
+                        help="数据集文件路径、名称（twitter29 / twitter45）或 'synthetic'")
     # 对象级参数
     parser.add_argument("--capacity", type=int, default=None,
                         help="对象级缓存总容量（字节）")
@@ -47,8 +47,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", "-o", type=str, default=None,
                         help="输出报告路径（JSON/CSV）")
     parser.add_argument("--seed", type=int, default=None, help="随机种子")
-    parser.add_argument("--competitive", action="store_true",
-                        help="运行 Belady 基线并计算竞争比")
+    parser.add_argument("--competitive", action=argparse.BooleanOptionalAction,
+                        default=True,
+                        help="运行 Belady 基线并计算竞争比（默认开启，用 --no-competitive 关闭）")
     parser.add_argument("--no-integrity-check", action="store_true",
                         help="跳过启动时的 trace 完整性检查")
     # 合成数据集参数

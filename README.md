@@ -142,6 +142,68 @@ python -m cache_sim --config experiment.json
 - `results/experiment.json` — 完整结果 (含配置、extra 字段)
 - `results/experiment.csv` — 表格数据 (便于导入 Excel/Pandas)
 
+## ALL Usage
+
+
+### 1. 模拟模式
+
+```bash
+python -m cache_sim [options]            # 单次模拟（需 --algorithm）
+python -m cache_sim --config <file>      # 批量实验
+python -m cache_sim --list-algorithms    # 列出算法后退出
+```
+
+| 参数 | 短选项 | 类型 | 取值 / 范围 | 默认值 | 说明 |
+|------|--------|------|-------------|--------|------|
+| `--config` | `-c` | str | 文件路径（YAML/JSON） | 无 | 批量实验配置文件路径，指定后按配置运行 |
+| `--algorithm` | `-a` | str | `lru` / `lfu` / `fifo` / `random` / `randomized_marking` / `belady` / `bit_model_online` | 无（必填） | 驱逐算法注册名（见 [算法说明](#算法说明)） |
+| `--dataset` | `-d` | str | 文件路径 / 数据集名（`twitter29` / `twitter45`）/ `synthetic` | 无（必填） | 数据集来源；`synthetic` 表示使用合成生成器 |
+| `--capacity` | — | int | 正整数（字节） | 无（必填） | 对象级缓存总容量；≤0 会抛 `ValueError` |
+| `--cost-model` | — | str | `bit` / `fault` / `general` | `bit` | 成本模型：`bit`=按字节（cost=size）、`fault`=每次未命中代价为 1、`general`=预留（cost=size） |
+| `--output` | `-o` | str | 文件路径（`.json` 或 `.csv`） | 无 | 报告输出路径，按后缀决定输出格式 |
+| `--seed` | — | int | 任意整数 | 无 | 随机种子，用于复现（合成 trace 与随机算法） |
+| `--competitive` | — | flag | — | **开启** | 运行 Belady 基线并计算竞争比；用 --no-competitive 关闭 |
+| `--no-integrity-check` | — | flag | — | 关闭 | 跳过启动时对文件 trace 的完整性检查 |
+| `--num-pages` | — | int | 正整数 | 100 | 合成数据集对象数（仅 `--dataset synthetic` 生效）；≤0 会抛 `ValueError` |
+| `--length` | — | int | 非负整数 | 1000 | 合成数据集请求序列长度；<0 会抛 `ValueError`，0 返回空 trace |
+| `--size-range` | — | int×2 | `[min, max]`，min ≤ max | `[1, 1000]` | 合成对象大小范围（字节），用于 `randint` 采样 |
+| `--list-algorithms` | — | flag | — | 关闭 | 列出所有已注册算法并退出 |
+
+> 单次模拟模式必须同时给出 `--algorithm` 与 `--dataset`，并需指定 `--capacity`（对象级缓存必填）。
+> `--config` 与 `--algorithm` 互斥：给定 `--config` 走批量实验，给定 `--algorithm` 走单次模拟，两者均无则打印帮助。
+> 内置数据集名映射：`twitter29` → `traces/twitter29_test10.csv`、`twitter45` → `traces/twitter45_test.csv`（均优先使用切分出的小样本，而非 GB 级原始文件 `twitter29_all.csv` / `twitter45.csv`）。
+
+### 2. 生成trace
+
+```bash
+python -m cache_sim gen-trace [options] -o <output>
+```
+
+生成 basic_trace（Pareto 流行度 + Bounded-Pareto 对象大小）。
+
+| 参数 | 短选项 | 类型 | 取值 / 范围 | 默认值 | 说明 |
+|------|--------|------|-------------|--------|------|
+| `--num-objects` | — | int | 正整数 | 1000 | 不同对象数量 `no_objs` |
+| `--popular-requests` | — | int | 正整数 | 10000 | 重复计数 / 时间上界 `reps`；最热门对象（i=0，速率 1）约产生此次数请求，总请求数为其 H_{no_objs,0.9} 倍 |
+| `--pareto-shape` | — | float | > 0 | 1.8 | Bounded-Pareto 大小形状参数 α（越大对象越偏小） |
+| `--min-size` | — | int | ≥ 1 | 1 | 对象大小下界  |
+| `--max-size` | — | int | ≥ min-size | 10000 | 对象大小上界  |
+| `--output` | `-o` | str | 文件路径 | —（必填） | 输出 trace 文件路径 |
+| `--seed` | — | int | 任意整数 | 无 | 随机种子 |
+
+### 3. 检查trace
+
+```bash
+python -m cache_sim check-trace <path> [--max-lines N]
+```
+
+对 trace 做完整性检查并打印统计（请求数、唯一对象数、总字节、大小范围、extra 列数）。
+
+| 参数 | 类型 | 取值 / 范围 | 默认值 | 说明 |
+|------|------|-------------|--------|------|
+| `path`（位置参数） | str | 文件路径 | —（必填） | 待检查的 trace 文件路径 |
+| `--max-lines` | int | 非负整数 | 0 | 最多检查的行数；`0` 表示全量检查 |
+
 ## Trace 数据格式
 
 对象级缓存 trace 为空格分隔的文本格式，每行一条请求:
