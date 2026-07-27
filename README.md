@@ -56,8 +56,6 @@ cachesim/
 python -m cache_sim --list-algorithms
 ```
 
-输出: `lru`, `lfu`, `fifo`, `random`, `randomized_marking`, `belady`, `bit_model_online`
-
 #### 单次模拟
 
 ```bash
