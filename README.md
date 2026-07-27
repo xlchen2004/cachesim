@@ -1,45 +1,8 @@
 # CacheSim — 对象级缓存模拟框架
 
-对象级缓存（Content Cache）模拟器，通过回放请求 trace 来模拟多种缓存驱逐策略，并以此框架为基础实验新算法。
+缓存模拟器，通过回放请求 trace 来模拟多种缓存驱逐策略，并以此框架为基础实验新算法。
 
-## 项目结构
 
-```
-cachesim/
-├── cache_sim/                   # 主包
-│   ├── __init__.py              # 版本信息
-│   ├── __main__.py              # 入口: python -m cache_sim
-│   ├── core/                    # 核心抽象
-│   │   ├── models.py            # ContentCache 缓存模型、SimulationResult 结果模型
-│   │   └── policy.py            # EvictionPolicy 驱逐策略抽象基类、AccessContext
-│   ├── algorithms/              # 驱逐算法实现
-│   │   ├── registry.py          # 算法注册机制 (@register / get_algorithm)
-│   │   ├── lru.py               # LRU (Least Recently Used)
-│   │   ├── lfu.py               # LFU (Least Frequently Used)
-│   │   ├── fifo.py              # FIFO (First In First Out)
-│   │   ├── random_evict.py      # Random 随机驱逐
-│   │   ├── randomized_marking.py # Randomized Marking (Fiat et al.)
-│   │   ├── belady.py            # Belady 最优离线算法
-│   │   └── bit_model_online.py  # Learning-Augmented Bit-Model Caching (论文实现)
-│   ├── engine/                  # 模拟引擎
-│   │   ├── simulator.py         # ContentSimulator、BitModelOnlineSimulator、竞争比计算
-│   │   └── experiment.py        # ExperimentRunner 批量实验编排
-│   ├── traceparser/             # Trace 解析与生成
-│   │   ├── reader.py            # ContentTraceReader 流式读取器 + 完整性检查
-│   │   ├── loader.py            # 数据集定位与注册
-│   │   ├── tracegenerator.py    # SyntheticGenerator 合成 trace 生成器
-│   │   └── basic_trace.py       # basic_trace.cc 的 Python 复现 (Pareto/Bounded-Pareto)
-│   ├── config/                  # 实验配置
-│   │   ├── schema.py            # 配置数据类 (AlgorithmConfig, DatasetConfig, ExperimentConfig)
-│   │   └── loader.py            # JSON/YAML 配置加载器
-│   ├── metrics/                 # 报告生成
-│   │   └── report.py            # JSON/CSV 输出 + 控制台摘要
-│   └── cli/                     # 命令行入口
-│       └── main.py              # argparse CLI (模拟 / gen-trace / check-trace)
-├── traces/                      # Trace 数据文件目录
-├── 项目设计.md                   # 项目设计文档
-└── README.md
-```
 
 ## 快速开始
 
@@ -62,6 +25,9 @@ python -m cache_sim --list-algorithms
 # 使用文件 trace 运行 LRU 算法
 python -m cache_sim --algorithm lru --dataset traces/twitter29_test10.csv --capacity 10000
 
+# 使用内置数据集名
+python -m cache_sim --algorithm lru --dataset wiki2018 --capacity 10000
+
 # 使用合成数据集
 python -m cache_sim --algorithm lru --dataset synthetic --capacity 5000 \
     --num-pages 200 --length 5000 --seed 42
@@ -75,10 +41,10 @@ python -m cache_sim --algorithm lru --dataset traces/twitter29_test10.csv \
     --capacity 10000 --output results/lru_result.json
 ```
 
-#### 生成 Trace
+#### 合成 Trace
 
 ```bash
-# 生成 basic_trace (Pareto 流行度 + Bounded-Pareto 对象大小)
+# 合成 basic_trace 
 python -m cache_sim gen-trace --num-objects 1000 --popular-requests 10000 --pareto-shape 1.8 --min-size 1 --max-size 10000 -o traces/my_trace.tr --seed 42
 ```
 
@@ -137,21 +103,19 @@ python -m cache_sim [options]            # 单次模拟
 |------|--------|------|-------------|--------|------|
 | `--config` | `-c` | str | 文件路径（YAML/JSON） | 无 | 批量实验配置文件路径，指定后按配置运行 |
 | `--algorithm` | `-a` | str | `lru` / `lfu` / `fifo` / `random` / `randomized_marking` / `belady` / `bit_model_online` | 无（必填） | 驱逐算法注册名（见 [算法说明](#算法说明)） |
-| `--dataset` | `-d` | str | 文件路径 / 数据集名（`twitter29` / `twitter45`）/ `synthetic` | 无（必填） | 数据集来源；`synthetic` 表示使用合成生成器 |
+| `--dataset` | `-d` | str | 文件路径 / 数据集名（`twitter29` / `twitter45` / `wiki2018`）/ `synthetic` | 无（必填） | 数据集来源；`synthetic` 表示使用合成数据集 |
 | `--capacity` | — | int | 正整数（字节） | 无（必填） | 对象级缓存总容量；≤0 会抛 `ValueError` |
 | `--cost-model` | — | str | `bit` / `fault` / `general` | `bit` | 成本模型：`bit`=按字节（cost=size）、`fault`=每次未命中代价为 1、`general`=预留（cost=size） |
 | `--output` | `-o` | str | 文件路径（`.json` 或 `.csv`） | 无 | 报告输出路径，按后缀决定输出格式 |
 | `--seed` | — | int | 任意整数 | 无 | 随机种子，用于复现（合成 trace 与随机算法） |
-| `--competitive` | — | flag | — | **开启** | 运行 Belady 基线并计算竞争比；用 --no-competitive 关闭 |
+| `--competitive` | — | flag | — | 开启 | 运行 Belady 基线并计算竞争比；用 --no-competitive 关闭 |
 | `--no-integrity-check` | — | flag | — | 关闭 | 跳过启动时对文件 trace 的完整性检查 |
 | `--num-pages` | — | int | 正整数 | 100 | 合成数据集对象数（仅 `--dataset synthetic` 生效）；≤0 会抛 `ValueError` |
 | `--length` | — | int | 非负整数 | 1000 | 合成数据集请求序列长度；<0 会抛 `ValueError`，0 返回空 trace |
 | `--size-range` | — | int×2 | `[min, max]`，min ≤ max | `[1, 1000]` | 合成对象大小范围（字节），用于 `randint` 采样 |
 | `--list-algorithms` | — | flag | — | 关闭 | 列出所有已注册算法并退出 |
 
-> 单次模拟模式必须同时给出 `--algorithm` 与 `--dataset`，并需指定 `--capacity`（对象级缓存必填）。
-> `--config` 与 `--algorithm` 互斥：给定 `--config` 走批量实验，给定 `--algorithm` 走单次模拟，两者均无则打印帮助。
-> 内置数据集名映射：`twitter29` → `traces/twitter29_test10.csv`、`twitter45` → `traces/twitter45_test.csv`（均优先使用切分出的小样本，而非 GB 级原始文件 `twitter29_all.csv` / `twitter45.csv`）。
+
 
 ### 2. 生成trace
 
@@ -239,21 +203,60 @@ time id size [extra...]
 | competitive_ratio | 竞争比 = online_misses / belady_misses |
 | fetch_cost | Bit-Model 取回代价（仅 bit_model_online） |
 
-## 运行验证结果
+## 运行结果
 
-以下是在 `traces/twitter29_test10.csv` (9566 条请求, 5716 个对象, 总字节 5,067,120) 上的测试结果:
 
-| algorithm | k | OHR | BHR | CR |
-|-----------|------|------|------|------|
-| Belady | 10000 | 0.2793 | 0.1823 | 1.000 |
-| LFU | 10000 | 0.1304 | 0.0832 | 1.207 |
-| LRU | 10000 | 0.1166 | 0.0898 | 1.226 |
-| FIFO | 10000 | 0.1111 | 0.0865 | 1.233 |
-| RandomizedMarking | 10000 | 0.1092 | 0.0877 | — |
-| Random | 10000 | 0.1055 | 0.0823 | — |
-| LRU | 5000 | 0.0771 | 0.0573 | 1.161 |
-| FIFO | 5000 | 0.0751 | 0.0561 | 1.164 |
+测试配置：
 
+| 数据集 | 请求总数 | 不同对象数 |对象大小范围 | 总字节数 | 缓存大小 |
+|--------|---------|---------|--------|---------|--------|
+| synthetic_test.csv | 105181 | 1000 | [1, 74] | 161753 | 500 |
+| twitter29_test10.csv | 9566 | 5716 | [35, 49465] | 5067120 | 10000 |
+| twitter45_test.csv | 10000 | 9320 | [1, 1014] | 500505 | 10000 |
+| wiki2018_test10.csv | 10000 | 6504 | [89,12542746] | 380700557 | 15000000 |
+
+
+> **竞争比口径说明**：LRU / Belady 的竞争比为**未命中次数比**（online_misses / belady_misses），`bit_model_online` 的竞争比为**字节代价比**（fetch_cost / belady 字节未命中量），两者口径不同、不可直接横向比较；Belady 为离线最优基准（竞争比恒为 1.0），且其并非 bit 模型的最优离线解，故 bit 的代价比相对真实 OPT 被低估。`fetch_cost` 仅 `bit_model_online` 输出（“-”表示不适用）。
+
+### synthetic_test.csv（capacity=500）
+
+| 算法 | 命中 | 未命中 | OHR | 字节命中 | BHR | 驱逐 | fetch_cost | 竞争比 |
+|------|------|--------|------|---------|-----|------|-----------|--------|
+| lru | 71392 | 33789 | 0.6788 | 97323 | 0.6017 | 33524 | - | 1.9864 |
+| belady | 88171 | 17010 | 0.8383 | 128513 | 0.7945 | 16726 | - | 1.0000 |
+| bit_model_online | 57990 | 47191 | 0.5513 | 79414 | 0.4910 | 96304 | 182878 | 5.5017 |
+
+### twitter29_test10.csv（capacity=10000）
+
+| 算法 | 命中 | 未命中 | OHR | 字节命中 | BHR | 驱逐 | fetch_cost | 竞争比 |
+|------|------|--------|------|---------|-----|------|-----------|--------|
+| lru | 1116 | 8450 | 0.1167 | 454973 | 0.0898 | 8427 | - | 1.2305 |
+| belady | 2699 | 6867 | 0.2821 | 929022 | 0.1833 | 6846 | - | 1.0000 |
+| bit_model_online | 673 | 8893 | 0.0704 | 381514 | 0.0753 | 8915 | 4705982 | 1.1372 |
+
+### twitter45_test.csv（capacity=10000）
+
+| 算法 | 命中 | 未命中 | OHR | 字节命中 | BHR | 驱逐 | fetch_cost | 竞争比 |
+|------|------|--------|------|---------|-----|------|-----------|--------|
+| lru | 188 | 9812 | 0.0188 | 18183 | 0.0363 | 9582 | - | 1.0469 |
+| belady | 628 | 9372 | 0.0628 | 62316 | 0.1245 | 9132 | - | 1.0000 |
+| bit_model_online | 164 | 9836 | 0.0164 | 16282 | 0.0325 | 9638 | 484223 | 1.1051 |
+
+### wiki2018_test10.csv（capacity=15000000）
+
+| 算法 | 命中 | 未命中 | OHR | 字节命中 | BHR | 驱逐 | fetch_cost | 竞争比 |
+|------|------|--------|------|---------|-----|------|-----------|--------|
+| lru | 1962 | 8038 | 0.1962 | 4738203 | 0.0124 | 7618 | - | 1.2120 |
+| belady | 3368 | 6632 | 0.3368 | 11691491 | 0.0307 | 6317 | - | 1.0000 |
+| bit_model_online | 977 | 9023 | 0.0977 | 2427325 | 0.0064 | 9363 | 416030328 | 1.1274 |
+
+### 结果分析
+
+- **Belady** 作为离线最优基准，在所有数据集上命中率（OHR/BHR）均最高，符合预期。
+- **LRU** 作为在线基线，在真实 trace（twitter29/45、wiki）上未命中次数竞争比约为 1.05–1.23，表现稳健。
+- **bit_model_online** 在三个真实 trace 上字节代价竞争比为 **1.11–1.14**，接近 Belady 基准，符合其 O(log k) 量级的理论竞争比保证。需注意该算法以**字节取回代价**为优化目标而非命中次数，且其缓存状态分布更新会引入额外取回，故各 trace 上对象命中率（OHR）普遍低于 LRU。
+- 在 **synthetic_test** 上（对象大小几乎全为 1 字节、缓存小、驱逐频繁），bit_model_online 的额外取回开销被放大，fetch_cost 甚至高于 LRU 的字节未命中量，字节代价竞争比高达 5.50——该算法的优势在均匀微小对象的高频驱逐场景下无法体现。
+- twitter45_test 的请求中约 93% 为唯一对象，时序局部性极弱，故各算法命中率整体偏低，属 trace 本身特性。
 
 ## 扩展新算法
 

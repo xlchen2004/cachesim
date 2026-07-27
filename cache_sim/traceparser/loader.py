@@ -14,7 +14,7 @@ from cache_sim.traceparser.reader import Access, ContentTraceReader, check_trace
 DATASETS_DIR = Path(__file__).resolve().parents[2] / "traces"
 
 # 已知的对象级缓存数据集名称（均按 (time, id, size[, extra]) 格式存储）
-KNOWN_DATASETS: Tuple[str, ...] = ("twitter29", "twitter45")
+KNOWN_DATASETS: Tuple[str, ...] = ("twitter29", "twitter45", "wiki2018")
 
 
 def iter_requests(path: Union[str, Path]) -> Iterator[Access]:
@@ -53,6 +53,15 @@ def find_dataset_path(name: str, split: str = "train") -> Optional[Path]:
             DATASETS_DIR / f"twitter45_{split}.csv",               # 扁平
             DATASETS_DIR / "twitter45" / "twitter45_test.csv",     # 子目录
             DATASETS_DIR / "twitter45" / f"twitter45_{split}.csv",
+        ]
+    elif name == "wiki2018":
+        # wiki2018.csv 体积巨大（34GB），优先使用切分出的小样本
+        # wiki2018_test10.csv（前 1 万行）；找不到样本时退回按 split 查找。
+        candidates = [
+            DATASETS_DIR / "wiki2018_test10.csv",                  # 扁平
+            DATASETS_DIR / f"wiki2018_{split}.csv",                # 扁平
+            DATASETS_DIR / "wiki2018" / "wiki2018_test10.csv",     # 子目录
+            DATASETS_DIR / "wiki2018" / f"wiki2018_{split}.csv",
         ]
     else:
         candidates = [

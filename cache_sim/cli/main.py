@@ -2,7 +2,7 @@
 
 支持三种子命令（首 token 分派）：
   1. ``python -m cache_sim --config experiment.yaml`` 或
-     ``python -m cache_sim --algorithm lru --dataset twitter29 --capacity 1000``
+     ``python -m cache_sim --algorithm lru --dataset wiki2018 --capacity 1000``
      —— 运行模拟（单次 / 配置文件批量）。
   2. ``python -m cache_sim gen-trace ...`` —— 生成 Pareto/Bounded-Pareto 合成 trace。
   3. ``python -m cache_sim check-trace <path>`` —— 对 trace 做完整性检查并打印统计。
@@ -36,7 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--algorithm", "-a", type=str, default=None,
                         help=f"算法名称（可选: {', '.join(list_algorithms())}）")
     parser.add_argument("--dataset", "-d", type=str, default=None,
-                        help="数据集文件路径、名称（twitter29 / twitter45）或 'synthetic'")
+                        help="数据集文件路径、名称（twitter29 / twitter45 / wiki2018）或 'synthetic'")
     # 对象级参数
     parser.add_argument("--capacity", type=int, default=None,
                         help="对象级缓存总容量（字节）")
