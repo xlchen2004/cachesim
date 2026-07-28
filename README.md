@@ -216,7 +216,7 @@ time id size [extra...]
 | wiki2018_test10.csv | 10000 | 6504 | [89,12542746] | 380700557 | 15000000 |
 
 
-> **竞争比口径说明**：LRU / Belady 的竞争比为**未命中次数比**（online_misses / belady_misses），`bit_model_online` 的竞争比为**字节代价比**（fetch_cost / belady 字节未命中量），两者口径不同、不可直接横向比较；Belady 为离线最优基准（竞争比恒为 1.0），且其并非 bit 模型的最优离线解，故 bit 的代价比相对真实 OPT 被低估。`fetch_cost` 仅 `bit_model_online` 输出（“-”表示不适用）。
+> **说明**：LRU / Belady 的竞争比为**未命中次数比**（online_misses / belady_misses），`bit_model_online` 的竞争比为**字节代价比**（fetch_cost / belady 字节未命中量）；Belady 为离线最优基准，且其并非 bit 模型的最优离线解。
 
 ### synthetic_test.csv（capacity=500）
 
