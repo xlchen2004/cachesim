@@ -156,7 +156,11 @@ class SimulationResult:
     byte_total: int = 0
     byte_hit: int = 0
     evictions: int = 0
+    # 对象数竞争比 = online_misses / belady_misses（fault 模型代价比）
     competitive_ratio: Optional[float] = None
+    # 字节数竞争比 = online 字节代价 / belady 字节代价（bit 模型代价比）；
+    # 字节代价 = 取回字节数：bit_model_online 用 fetch_cost，其余用字节未命中量。
+    byte_competitive_ratio: Optional[float] = None
     extra: Dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -189,6 +193,7 @@ class SimulationResult:
             "bhr": self.bhr,
             "evictions": self.evictions,
             "competitive_ratio": self.competitive_ratio,
+            "byte_competitive_ratio": self.byte_competitive_ratio,
             "extra": self.extra,
         }
 

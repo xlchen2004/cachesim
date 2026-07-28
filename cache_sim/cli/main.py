@@ -22,7 +22,7 @@ from cache_sim.traceparser.loader import check_trace, find_dataset_path, iter_re
 from cache_sim.traceparser.tracegenerator import SyntheticGenerator
 from cache_sim.engine.simulator import (
     BitModelOnlineSimulator, ContentSimulator,
-    compute_bit_cost_ratio, compute_competitive_ratio,
+    compute_byte_competitive_ratio, compute_competitive_ratio,
 )
 
 
@@ -80,7 +80,9 @@ def _print_result(result) -> None:
         print(f"bit-model 取回代价: {fc}")
     print(f"驱逐次数: {result.evictions}")
     if result.competitive_ratio is not None:
-        print(f"竞争比: {result.competitive_ratio:.4f}")
+        print(f"对象数竞争比: {result.competitive_ratio:.4f}")
+    if result.byte_competitive_ratio is not None:
+        print(f"字节数竞争比: {result.byte_competitive_ratio:.4f}")
 
 
 def _resolve_path(dataset: str) -> Optional[Path]:
@@ -158,15 +160,16 @@ def run_single(args) -> None:
     if args.competitive and not getattr(policy, "offline", False):
         belady = get_algorithm("belady")
         belady_result = _simulate(args, belady, dataset_name, trace_factory)
-        if is_dist:
-            result.competitive_ratio = compute_bit_cost_ratio(result, belady_result)
-        else:
-            result.competitive_ratio = compute_competitive_ratio(result, belady_result)
+        # 两个竞争比均以 Belady 为基准，对所有在线算法统一计算
+        result.competitive_ratio = compute_competitive_ratio(result, belady_result)
+        result.byte_competitive_ratio = compute_byte_competitive_ratio(result, belady_result)
         belady_result.competitive_ratio = 1.0
+        belady_result.byte_competitive_ratio = 1.0
         print("\n--- Belady 基线 ---")
         _print_result(belady_result)
     elif getattr(policy, "offline", False):
         result.competitive_ratio = 1.0
+        result.byte_competitive_ratio = 1.0
 
     _print_result(result)
 

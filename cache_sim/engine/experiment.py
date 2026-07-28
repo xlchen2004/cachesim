@@ -15,7 +15,7 @@ from cache_sim.traceparser.loader import check_trace, find_dataset_path, iter_re
 from cache_sim.traceparser.tracegenerator import SyntheticGenerator
 from cache_sim.engine.simulator import (
     BitModelOnlineSimulator, ContentSimulator,
-    compute_bit_cost_ratio, compute_competitive_ratio,
+    compute_byte_competitive_ratio, compute_competitive_ratio,
 )
 
 
@@ -71,7 +71,8 @@ class ExperimentRunner:
                                    cost_model=ds_cfg.cost_model, dataset_name=ds_cfg.name)
         result = sim.run(trace_factory())
 
-        # 竞争比：运行 Belady 基线（在线算法才有意义）；Belady 始终走 ContentSimulator
+        # 竞争比：运行 Belady 基线（在线算法才有意义）；Belady 始终走 ContentSimulator。
+        # 两个竞争比（对象数 / 字节数）对所有在线算法统一计算，不再区分 distribution_based。
         competitive = self.config.competitive or ds_cfg.competitive
         if competitive and not getattr(policy, "offline", False):
             belady = get_algorithm("belady")
@@ -79,12 +80,11 @@ class ExperimentRunner:
                 belady, capacity=cache_size,
                 cost_model=ds_cfg.cost_model, dataset_name=ds_cfg.name)
             belady_result = belady_sim.run(trace_factory())
-            if is_dist:
-                result.competitive_ratio = compute_bit_cost_ratio(result, belady_result)
-            else:
-                result.competitive_ratio = compute_competitive_ratio(result, belady_result)
+            result.competitive_ratio = compute_competitive_ratio(result, belady_result)
+            result.byte_competitive_ratio = compute_byte_competitive_ratio(result, belady_result)
         elif getattr(policy, "offline", False):
             result.competitive_ratio = 1.0
+            result.byte_competitive_ratio = 1.0
 
         if self.config.repeats > 1:
             result.algorithm = f"{alg_cfg.name}#{rep}"

@@ -52,11 +52,13 @@ class ReportGenerator:
             print("无结果")
             return
         print(f"{'algorithm':<20} {'dataset':<14} {'type':<16} {'k':>10} "
-              f"{'hits':>8} {'misses':>8} {'hit_rate':>10} {'bhr':>8} {'cr':>8}")
-        print("-" * 112)
+              f"{'hits':>8} {'misses':>8} {'hit_rate':>10} {'bhr':>8} "
+              f"{'ocr':>8} {'bcr':>8}")
+        print("-" * 122)
         for r in results:
             cr = f"{r.competitive_ratio:.3f}" if r.competitive_ratio is not None else "-"
+            bcr = f"{r.byte_competitive_ratio:.3f}" if r.byte_competitive_ratio is not None else "-"
             bhr = f"{r.bhr:.4f}" if r.byte_total > 0 else "-"
             print(f"{r.algorithm:<20} {r.dataset:<14} {r.cache_type:<16} "
                   f"{_cache_size(r):>10} {r.hits:>8} {r.misses:>8} "
-                  f"{r.hit_rate:>10.4f} {bhr:>8} {cr:>8}")
+                  f"{r.hit_rate:>10.4f} {bhr:>8} {cr:>8} {bcr:>8}")

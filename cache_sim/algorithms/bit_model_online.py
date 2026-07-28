@@ -526,10 +526,13 @@ class BitModelOnline:
         self._recompactions += 1
         deficit = sum(self.w.values()) - self.k
         eps = self._eps
-        # 重置 µ / 索引（profile 随 _add_mass 重建）
+        # 重置 µ / 索引（profile / order_key 随 _add_mass 重建）。
+        # _order_keys 必须一并重置：否则其持有历次 _recompact 产生的 frozenset 引用，
+        # 导致旧 D 无法被 GC（内存泄漏，长 trace 上可膨胀至数 GB）。stale 条目从不被读取。
         self.mu = {}
         self._profiles = {}
         self._by_count = [{} for _ in range(self.U + 1)]
+        self._order_keys = {}
         if deficit <= eps:
             # 缓存未满：µ = {(∅,1)}
             self._add_mass(frozenset(), 1.0)
@@ -605,6 +608,7 @@ class BitModelOnline:
         self.mu = {}
         self._profiles = {}
         self._by_count = [{} for _ in range(self.U + 1)]
+        self._order_keys = {}
         self._suffix_y = [0.0] * (self.U + 1)
         self._add_mass(frozenset(), 1.0, [0] * (self.U + 1))
         self._recompactions = 0
