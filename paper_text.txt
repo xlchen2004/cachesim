@@ -1,0 +1,1222 @@
+===== PAGE 1 =====
+A Unified 
+Amotz Bar-Noy* 
+Approach to Approximating Resource Allocation and 
+Scheduling 
+Reuven Bar-Yehuda t Ari Freund$ Joseph (Seffi) Naor§ Baruch Schieber ¶ 
+Abstract 
+We present a general framework for solving resource allo- 
+cation and scheduling problems. Given a resource of fixed 
+size, we present algorithms that approximate the maximum 
+throughput or the minimum loss by a constant factor. Our 
+approximation factors apply to many problems, among which 
+are: (i) real-time scheduling of jobs on parallel machines; (ii) 
+bandwidth allocation for sessions between two endpoints; 
+(iii) general caching; (iv) dynamic storage allocation; (v) 
+bandwidth allocation on optical line and ring topologies. 
+For some of these problems we provide the first constant 
+factor approximation algorithm. Our algorithms are simple 
+and efficient. They use the local-ratio technique and can be 
+equivalently interpreted within the primal-dual schema. 
+Keywords: resource allocation, scheduling, bandwidth al- 
+location, interval scheduling, interval graphs, scheduling with 
+release times and deadlines. 
+*AT&T Shannon Lab, 180 Park Ave., P.O. Box 971, Florham 
+Park, NJ 07932. On leave from the Electrical Engineer- 
+ing Department, Tel Aviv University, Tel Aviv 69978, Israel. 
+E-mail: amotz@research.att.com. 
+tComputer Science Department, Technion, Haifa 32000, Is- 
+rael. Part of this work done while the author visited DIMACS 
+during the summer of 1999. This research was supported by the 
+Technion V.P.R. Fund and the New York Metropolitan Research 
+Fund. E-mail: reuven@cs.technion.ac.il. 
+$Computer Science Department, Technion, Haifa 32000, Is- 
+rael. Work supported by Ministry of Trade and Indus- 
+try's MAGNET program through the CONSIST consortium. 
+Part of the work was done at Bell Laboratories, Lucent 
+Technologies, 600 Mountain Ave., Murray Hill, NJ 07974. 
+E-mail: arief@cs.technion.ac.il. 
+§Bell Laboratories, Lucent Technologies, 600 Mountain 
+Ave., Murray Hill, NJ 07974. On leave from the Com- 
+puter Science Department, Technion, Haifa 32000, Israel. 
+E-mail: naor@research.bell-labs.com. 
+¶IBM T.J. Watson Research Center, P.O. Box 218, Yorktown 
+Heights, NY 10598. E-mail: sbar@watson.ibm.com. 
+Permission to make digital or bard copies of all or part of this work for 
+personal or classroom use is granted without fee provided that copies 
+are not made or distributed fbr profit or commercial advantage and that 
+copies bear this notice and the full citation on the fiJ~t page. To copy 
+otherwise, to republish, to post on se~wers or to redistribute to lists, 
+requires prior specific permission and/or a fee. 
+STOC 2000 Portland Oregon USA 
+Copyright ACM 2000 1-58113-184-4/00/5...$5.00 
+1 Introduction 
+We study the generalized problem of resource allocation and 
+activity scheduling. In this problem we have a set of activi- 
+ties competing for a reusable resource. Each activity utilizes 
+a certain amount of the resource for the duration of its exe- 
+cution and frees it upon completion. The problem is to select 
+a feasible subset of activities for execution, that is, a set of 
+activities such that the total amount of resource allocated 
+simultaneously for executing activities does not exceed the 
+amount of resource available. A typical activity may admit 
+several alternatives for its execution, at most one of which 
+is to be selected. Each alternative consists of a time inter- 
+val during which the activity is to take place, the resource 
+requirement for the activity should it take place in this inter- 
+val, and the profit to be gained by scheduling the activity 
+in this interval. We allow the length of the time interval, 
+the resource demand, and the profit to vary among different 
+time intervals pertaining to the same activity. Thus, the ac- 
+tual objective is to find a feasible schedule specifying which 
+activities are selected, and when each is to be executed, so 
+as to maximize the profit accrued. We also consider the 
+complement objective of minimizing the profit lost due to 
+unscheduled activities. 
+This scenario models a wide range of applications. Two 
+basic problems are immediately seen to fit in this frame- 
+work: bandwidth allocation for sessions in communication 
+networks and machine scheduling of jobs. Another, less ob- 
+vious, problem that fits in this framework is the general 
+caching problem in which a fixed size cache is used to store 
+pages of varying size and reload cost. Finally, problems such 
+as dynamic storage allocation, in which the resource must 
+be allocated "contiguously", can be cast in our framework 
+by adding a contiguity constraint. 
+The simplest problem that can be modeled in our frame- 
+work is the problem of finding a maximum weight indepen- 
+dent set in interval graphs [14]. This problem, which can 
+be solved precisely and efficiently, corresponds to the case 
+where the resource is a single machine and each activity is 
+a task that requires the entire machine for its execution in 
+precisely one time interval. No two tasks may run concur- 
+rently, hence feasible schedules correspond to independent 
+sets. Although this problem is polynomial time solvable, 
+it becomes NP-hard if either the resource requirement or 
+the single-time-interval-per-activity constraint are relaxed. 
+If activities may require arbitrary amounts of the resource, 
+the problem is NP-hard since it contains the NP-hard knap- 
+sack problem [12] as a special case (in which all time intervals 
+intersect); if activities are allowed to have multiple time in- 
+735 
+
+
+===== PAGE 2 =====
+tervals, the problem is known as interval scheduling, which 
+is NP-hard and in fact Max-SNP-hard [18]. 
+1.1 Previous Work and Our contribution 
+We provide a unified approach to treating problems for- 
+mulated in our model by using a novel technique for com- 
+bining time and resource constraints. Our approach yields 
+constant-factor approximations for all the problems we con- 
+sider in this paper. For some of them this is the first constant 
+factor approximation algorithm. Our algorithms are based 
+on the local ratio technique [7] and they are simple and 
+efficient. We also show how to interpret them within the 
+primal-dual schema. We remark that obtaining a primal- 
+dual algorithm for a (naturM) maximization problem was 
+posed recently as an open problem [20]. Following is a list, 
+subdivided into broad categories, of the problems to which 
+we applied our unified approach. We note that the time in- 
+tervals in which an activity is allowed to be scheduled can 
+be given either as an explicit list (called discrete input), or 
+as a collection of time windows (called continuous input). 
+Machine Scheduling 
+The resource consists of k parallel machines and the activ- 
+ities are jobs to be scheduled on these machines. Each job 
+can be scheduled in one of several time intervals. The goal 
+is to maximize the profit of the executed jobs. There are 
+several sub-cases to this problem. 
+Maximum weight independent set in interval graphs. 
+Here, k = 1, and each job may be scheduled in one inter- 
+val only. This problem is well known to be polynomial-time 
+solvable [14]. Our algorithm also solves it optimally. 
+Interval scheduling. Here, k = 1, and each job may be 
+scheduled in one of a finite set of time intervals. Spieksma [18] 
+showed a simple greedy 1/2-approximation algorithm for the 
+unweighted case (where all instances of all activities have 
+identical profit). A 1/2-approximation factor via linear pro- 
+gramming (LP) is implicit in [5] for the weighted case (ar- 
+bitrary profits). Our algorithm achieves the same approxi- 
+mation factor for the weighted case combinatorially. 
+Single machine scheduling with release times and 
+deadlines. Again, k = 1. Each job i has a release time ri, 
+a deadline di, and a length li, such that di ~ ri + li. The job 
+may be scheduled in any interval [x,x + l~) such that x is 
+in the time window [ri, di - li]. Bar-Noy et al. [5] described 
+an LP-based 1/3-approximation algorithm for the weighted 
+case. Our algorithm achieves (1 -e)/2 approximation. It 
+even allows jobs to have multiple time windows (as does the 
+algorithm of [5]). 
+Scheduling on parallel unrelated machines. Here, k 
+is arbitrary, and the profit gained by scheduling a job de- 
+pends both on the job and on the machine to which it is 
+assigned (the input lists the profit corresponding to each 
+job/machine pair). Bar-Noy et al. [5] demonstrated a greedy 
+1/2-approximation algorithm for the unweighted case. For 
+the weighted case, they gave an LP-based algorithm that 
+achieves a factor of 1/3 for discrete input and 1/4 for contin- 
+uous input. Our algorithm achieves (1- e)/2 approximation 
+for continuous input and 1/2 for discrete input. 
+We note that for identical machines, i.e., when each job 
+may be scheduled on any one of the k machines, Bar-Noy 
+et al. [5] presented a greedy algorithm achieving a factor of 
+1 - 1/(1 q- 1/k) k for the unweighted case, and an LP-based 
+algorithm achieving 1 - 1/(1 q- 1/2k) k for the weighted case 
+(and continuous input). The former expression increases 
+with k from 1/2 to 1 - 1/e ~ 0.63, and the latter increases 
+from 1/3 to 1 - 1/x/~ ~-. 0.39. 
+Maximum weight k-colorable subgraph in interval 
+graphs. This is a special case of the previous problem in 
+which each job may be schedule in precisely one interval. 
+It can be solved precisely in polynomial time via minimum 
+1 4 k--!:-~- - approximation factor cost flow [2]. We achieve a $ + 
+through a much simpler and faster algorithm. 
+All of our algorithms for the problems listed above are 
+in fact instances of a single parameterized algorithm, where 
+the value of the parameter changes from problem to prob- 
+lem. The basic algorithm runs in polynomial time, specifi- 
+cally O(nlog n), for discrete inputs, where n is the number 
+of instances. To handle time windows efficiently we intro- 
+duce a certain profit rounding process, which degrades the 
+approximation factor by a factor of e. The running time of 
+this algorithm is O(n2/e). 
+The particular instance of our algorithm for interval 
+scheduling was also developed independently by Berman 
+and DasGupta [8]. They also employ the same rounding 
+idea which allows the algorithm to handle the time win- 
+dows present in the single machine scheduling problem. In 
+addition to single machine scheduling, they also considered 
+scheduling on parallel machines, both identical and unre- 
+lated. Here, their approach deviates from ours. Rather than 
+dealing with these problems directly, they solve them via sin- 
+gle machine scheduling (similar to [5]). The approximation 
+factors they achieve are 1 - ( k--+A-hk for identical machines \k+l/ 
+and (1 - e)/2 for unrelated machines. 
+Bandwidth Allocation of Sessions in Communication Net- 
+works 
+In modern communication networks (e.g., ATM networks), 
+there exists some available bandwidth between two end- 
+points in the network. The bandwidth allocation problem 
+is the problem of finding the most profitable set of sessions 
+that can utilize the available bandwidth. Our framework 
+includes this problem, and moreover, we capture the case in 
+which a session may have either a window of time or a finite 
+set of intervals in which it can be scheduled. Our algorithm 
+for this problem achieves a factor of 1/5 (or }(1 - e) if time 
+windows are allowed). Prior to our work, no constant fac- 
+tor approximation algorithms for this problem were known. 
+However, independent of our work, Phillips et al. [17] also 
+obtained approximation algorithms for this problem via LP 
+rounding. For discrete input they obtain an approximation 
+1 and for continuous input they obtain an approx- factor of 
+imation factor of ~. We note that the paper of Albers et 
+al. [1] implies a constant factor approximation (where the 
+constant is at least 22) via LP rounding for the special case 
+where each session can be scheduled in precisely one time 
+interval [15]. 
+General Caching 
+The general caching problem models situations in which a 
+cache is to be used for pages of varying sizes and of vary- 
+ing (cache) reload costs. Specifically, the input consists of a 
+cache size and a sequence of requests for pages. When a 
+page is requested it must be loaded into the cache, unless it 
+is already present there. Each page is characterized by its 
+size and its reload cost, which is incurred whenever the page 
+is loaded into the cache. (Requests for pages in the cache 
+incur no cost.) Since the cache size is fixed, loading one page 
+736 
+
+
+===== PAGE 3 =====
+may necessitate evicting another. The goal is thus to find a 
+minimum cost replacement schedule. We consider the off- 
+line version of this problem, i.e., the case where the input is 
+given ahead of time. As was shown in [1], the general caching 
+problem can be modeled in our framework. Our algorithm 
+for this problem yields a 4-approximation. (Note that since 
+this is a minimization problem the approximation ratio is at 
+least 1.) This improves the result of Albers et hi. [1], who 
+were only able to achieve an O(1)-approximation factor (us- 
+ing LP rounding) by increasing the size of the cache by O(1) 
+times the largest page size. If the cache size is not increased, 
+they only achieve a logarithmic factor approximation. 
+Contiguous Allocation 
+Suppose the resource must be allocated in "contiguous" blocks 
+that should remain the same until the resource is freed. For 
+example, in the dynamic storage allocation objects are to 
+be stored in computer memory for specified durations. Each 
+object must be allocated a block of contiguous memory, and 
+once the object is stored the location of its storage block may 
+not be altered. The traditional goal in contiguous allocation 
+has been to store all given objects in minimum size memory 
+[13, 16]. The throughput version of this problem is, given 
+a fixed size memory, to maximize the profit of the objects 
+successfully stored. To the best of our knowledge there is no 
+prior art for the throughput version of the dynamic storage 
+allocation problem. We obtain a 1/35 factor approximation 
+for this problem. Moreover, we solve the dynamic storage 
+allocation problem in the general case where objects can be 
+scheduled in more than one time interval. Informally, we use 
+our techniques for the non-contiguous version of the problem 
+so as to obtain a solution for the contiguous version, while 
+losing only a constant factor. Another example of contigu- 
+ous allocation is strip packing [19] where the goal is to pack 
+rectangles into a strip. Our constant-factor bound applies 
+to this problem as well. 
+The Line and Ring Topology Networks 
+Consider the bandwidth allocation problem where each ses- 
+sion can be scheduled in precisely one time interval, and 
+the start and end times of every such interval are restricted 
+to be integral time instants. This subproblem can be cast 
+in different terms. Consider a set of processors connected 
+along a line where each processor is identified by its index 
+along this line. By letting the processor identities play the 
+role of the integral time instants in the original problem, we 
+get the problem of bandwidth allocation for connection re- 
+quests between processors on a line where each such request 
+is for unlimited time. Clearly, all of our results regarding 
+the time interpretation hold for the processors interpreta- 
+tion as well. They hold for both throughput maximization 
+and loss minimization. An interesting application of our 
+general framework concerns the case where processors are 
+connected along a ring rather than a line. The ring topol- 
+ogy is considered a viable network topology in the optical 
+network setting and is well studied in the context of band- 
+width allocation. In the ring topology a session between 
+two processors may choose between two routes: going clock- 
+wise and going counter clockwise. In our framework, this is 
+equivalent to two instances per activity. Most of the prior 
+work in optical networks considered the identical width case 
+in which each session requires one wavelength. Our solutions 
+address the general case of more than one wavelength per 
+session. We show how to adapt any approximation result for 
+the throughput maximization problem on the line into one 
+for the same problem on the ring. Given ~hat the approxi- 
+mation factor for the line is 1/p, the resulting factor for the 
+ring is 1/(p+ l+e), where e may be chosen arbitrarily small 
+(the running time of the algorithm depends polynomially on 
+l/e). Due to space constraints this section is omitted from 
+the proceedings. 
+2 Preliminaries 
+In our general framework the input consists of a set of ac- 
+tivities, each requiring the utilization of a given, fimited, 
+resource. The amount of resource available is constant over 
+time; we normalize it to unit size for convenience. (We re- 
+mark that some of our problems can be generalized to the 
+case where the amount of available resource may change 
+over time.) The activities are specified as a collection of sets 
+.A1,... ,.Am. Each set represents a single activity: it consists 
+of all possible instances of that activity. An instance I E .Ai 
+is defined by the following parameters. 
+1. A half-open time interval Is(I), e(I)) during which the 
+activity will be executed. We call s(I) and e(I) the 
+start-time and end-time of the instance. 
+2. The amount of resource required for the activity. We 
+refer to this amount as the width of the instance and 
+denote it w(I). (Our terminology is inspired by band- 
+width allocation problems.) Naturally, 0 < w(I) < 1. 
+3. The profitp(I) >_ 0 gained by scheduling this instance 
+of the activity. 
+Different instances of the same activity may have different 
+parameters of duration, width, or profit. A schedule is a 
+collection of instances. It is feasible if (1) it contains at 
+most one instance of every activity, and (2) for all time in- 
+stants t, the total width of the instances in the schedule 
+whose time interval contains t does not exceed 1. In the 
+throughput maximization problem we are asked to find 
+a feasible schedule that maximizes the total profit accrued 
+by instances in the schedule. In the loss minimization 
+problem we seek a feasible schedule of minimum penalty, 
+where the penalty of a schedule is defined as the total profit 
+of activities not in the schedule. (We restrict each activity 
+to consist of a single instance and define the profit of an 
+activity to be the profit of its instance.) For a given profit 
+function p, we use the term p-profit (or p-penalty in the loss 
+minimization context) to refer to the profit with respect to 
+p of a single instance or a set of instances. 
+2.1 The Local Ratio Technique 
+Our algorithms are based on the local ratio technique, first 
+developed by Bar-Yehuda and Even [7], later extended by 
+Bafna, Berman, and Fujito [3], and recently extended again 
+by Bar-Yehuda [6]. These papers all treated minimization 
+covering problems. 
+Let p E IR n be a profit (or penalty) vector, and let F be 
+a set of feasibility constraints on vectors x E IR n. A vector 
+x E IR n is a feasible solution to a given problem (F, p) if it 
+satisfies all of the constraints in F. The value of a feasible 
+solution x is the inner product p • x. A feasible solution is 
+optimal for a maximization (or minimization) problem if its 
+value is maximal (or minimal) among all feasible solutions. 
+A feasible solution x is an r-approximate solution, or simply 
+an r-approximation, ifp.x >_ (or <) r.p.x*, where x* is an 
+737 
+
+
+===== PAGE 4 =====
+optimal solution. An algorithm is said to have a performance 
+guarantee of r if it always computes r-approximate solutions. 
+In this paper, we further extend the local ratio technique 
+to cover problems of the form described above; that is, given 
+a profit (or penalty) vector p • IR n, find a solution vector 
+x that maximizes (or minimizes) the inner product p - x, 
+subject to a given set F of feasibility constraints on x. 
+Theorem 2.1 (Local Ratio) Let F be a set of constraints 
+and let p, pl, and p2 be profit (or penalty) vectors such that 
+p = pl + P2. Then, if x is an r-approximate solution with 
+respect to (F,p~) and with respect to (F, p2), then x is an 
+r-approximate solution with respect to ( F, p). 
+Proof: Let x*, x~, x~ be optimal solutions for (F, p), (F, px), 
+and (/7, p2) respectively. Then p.x = pl -x+p2 .x _> (or _< 
+) r-pl.x~+r.p2.x~ > (or_<) r.(p~.x*+p~-x*)=r.p'x* 
+[3 
+The Local Ratio Theorem applies to all problems in the 
+above formulation. Note that F can include arbitrary feasi- 
+bility constraints and not just linear, or linear integer, con- 
+straints. Nevertheless, all successful applications of the local 
+ratio technique to date involve problems in which the con- 
+straints are either linear or linear integer, and this is also 
+the case for the problems treated herein. 
+3 Throughput Maximization 
+In the throughput maximization problem we wish to find a 
+feasible schedule of the activities that maximizes the total 
+profit accrued. More formally, the goal is to find an optimal 
+solution to the following ioteger programming problem on 
+the boolean variables {xl [ I • Ai, 1 < i < n}. 
+Maximize 
+subject to: 
+V time instant t: 
+V activity Ai: 
+V instance I: 
+~p(I) . xI 
+I 
+< 1. 
+I I s(I)<_t<e(I) 
+xz <_ 1. 
+IrAi 
+xi • {0,1}. 
+3.1 The Unified Algorithm 
+We present a generic scheme based on the local ratio tech- 
+nique to approximate the throughput maximization prob- 
+lem. We actually generalize the problem a bit and allow 
+negative profits. Our scheme proceeds as follows. 
+1. Delete all instances with non-positive profit. 
+2. If no instances remain, return the empty schedule. 
+Otherwise, proceed to the next step. 
+3. Select an instance I" and decompose p by p = pl + p2. 
+The exact choice of )' and the decomposition of p de- 
+pend on the problem at hand and will be discussed 
+shortly. (In the decomposition p ---- pl + p2, the com- 
+ponent p2 may be non-positive.) 
+4. Solve the problem recursivety using p2 as the profit 
+function. Let S' be the schedule returned. 
+5. If S' t2 {)'} is a feasible schedule, return S = S' U {)'}. 
+Otherwise, return S = S'. 
+We now analyze the quality of the solution produced by 
+the algorithm. We say that a feasible schedule is I-maximal, 
+if either it contains instance I, or it does not contain I but 
+adding I to it will render it infeasible. We are going to 
+choose )' and decompose p in such a way that (1) p2()') = 0 
+and (2) for a certain r, which depends on the problem being 
+solved, every )'-maximal schedule will be an r-approximation 
+with respect to pl. 
+Proposition 3.1 Let r be a constant. Suppose that the 
+method for choosing )' and decomposing the profit function 
+is such that (1)p2(I) = 0 and (2)for all profit functionsp, 
+every )'-maximal schedule is an r-approximation with respect 
+to pl. Then, the schedule S returned by the algorithm is an 
+r-approximation. 
+Proof: Clearly, the first step in which instances of non- 
+positive profit are deleted does not change the optimum 
+value. Thus, it is sufficient to show that S is an 
+r-approximation with respect to the remaining instances. 
+The proof is by induction on the number of recursive calls. 
+At the basis of the recursion, the schedule returned is op- 
+timal (and hence an r-approximation), since no instances 
+remain. For the inductive step, assume that S' is an r- 
+approximation with respect to p2. Then, since p2 ()') = 0 
+and S C_ S' U {I'}, it follows that S is an r-approximation 
+with respect to p2. Since S is )'-maximal, it is also an r- 
+approximation with respect to pl. Thus, by the Local Ratio 
+Theorem, it is an r-approximation with respect to p. [] 
+It remains to specify how to determine )' and the decom- 
+position of the profit function. The choice of )' is done by 
+selecting an instance with minimum end-time among all ac- 
+tivity instances (of all activities), breaking ties arbitrarily. 
+To define the decomposition p = pl + p2, we define pl. We 
+use a parameter o~ > 0, whose value we fix for each problem 
+separately, as follows. For a given instance I, let .,4(1) be the 
+activity to which instance I belongs and let Z(I) be the set 
+of instances intersecting I but belonging to activities other 
+than ..4(1). Then, 
+{ 1 z • A()'), 
+p, (I) = p()'). ~. w(I) I • :£()'), 
+0 otherwise. 
+The choice of a influences the performance guarantee r 
+we obtain. By Proposition 3.1 we only need to show that ev- 
+ery )'-maximal schedule is an r-approximation with respect 
+to px. To do so, we derive an upper bound bopt on the op- 
+timum pl-profit and a lower bound bmax on the pl-profit of 
+every )'-maximal schedule, both normalized by p()'), which 
+is to say that the actual bounds are p()').bmax and p()').bopt. 
+The ratio r = bmax/bopt is then a lower bound on the per- 
+formance of the algorithm. We now derive formulas for bopt 
+and bmax. These formulae are valid for the generic problem 
+and thus for all special cases as well. However, for specific 
+problems within the framework we are sometimes able to 
+show better choices of bopt and bmax. 
+Consider an optimal schedule. By the definition of pl, 
+only instances in .A()') U Z()') contribute to its pl-profit. 
+Since all the instances belonging to Z()') intersect at some 
+point infinitesimally close to e()'), the total width of such 
+instances in the optimal schedule can be at most 1, and their 
+contribution to the pl-profit is therefore at most a.p()'). The 
+contribution of the instances in .A()') is at most p()') since a 
+738 
+
+
+===== PAGE 5 =====
+feasible schedule may contain at most one instance of each 
+activity. Thus, we have bopt < 1 q- or. 
+Turning to I'-maximal schedules, observe that any such 
+schedule either contains an instance of .A(~) or else contains 
+a set A" # O of instances intersecting I" that prevent I" from 
+being added to the schedule. Let Wmax and Wmi n be upper 
+and lower bounds, respectively, on the width of instances 
+in the input. Then the total width of instances in X is at 
+least 1 - w()') > 1 - Wmax, for otherwise I" can be added 
+without violating the feasibility of the schedule, and it is 
+also not less than Wmi n since A" ~ O. Since 7 was chosen 
+as an instance with minimum end-time, every instance I 
+that intersects it must satisfy s(I) < e(I) < e(I). Hence, 
+A" C Z(7). Thus, we have bmax > min{1, c~. max{Train, 1 - 
+Wmax}}. In the general case, this bound is meaningless, 
+since Wmi n and 1 - Wmax may both be arbitrarily close to 0. 
+However, the various problems we treat impose restrictions 
+on the allowable widths of instances, and we can obtain 
+meaningful bounds. 
+Lemma 3.2 The approximation factor of the algorithm is 
+at least 
+min{1, a. max{Wmin, 1 - Wmax}} (1) 
+l+a 
+3.2 Applications 
+The throughput maximization problem generalizes several 
+known problems. In this section we present a selection of 
+these problems and show how to approximate them using 
+our scheme. 
+In some of the applications described below, an activity 
+,4 is not represented by explicitly listing all the instances 
+belonging to it, but rather by a collection of time windows. A 
+time window 7" is a time interval Is(T), e(T)) or [s(T), e(T)] 
+accompanied by three parameters: length l(T), width w(T), 
+and profit p(T). These are interpreted as follows. Every 
+t ~ T defines an instance with time interval [t, t + l(T)), 
+and all of these instances share the same width w(T) and 
+profit p(7-). Note that a time window must be closed on the 
+left but may be closed or open on the right. 
+This sort of continuous input leads of course to prob- 
+lems in the implementation of the algorithm. We discuss 
+this, as well as other implementation issues, in Section 3.3. 
+For the time being, let us just mention that the algorithm 
+can be implemented so that it always returns an r(1 - e) - 
+approximation, where r is the performance guarantee that 
+could be achieved had the instances been specified explic- 
+itly (i.e., discrete input), and e > 0 is an arbitrarily small 
+constant. The running time of this implementation is poly- 
+nomial in 1/e and the number of time windows in the input. 
+3.2.1 Single machine scheduling 
+Here we assume that the resource is a single machine and 
+each activity instance requires the machine. This is modeled 
+by the condition w(I) = 1 for all instances I. 
+Maximum weight independent set in interval graphs. Con- 
+sider the special case where each activity .Ai is a singleton 
+{Ii}. This is exactlythe problem of finding a maximum- 
+weight independent set in an interval graph, where each in- 
+stance Ii corresponds to an interval. This is a well known 
+problem, which can be solved precisely and efficiently by 
+reducing it to the problem of finding the longest path in a 
+DAG [14]. We claim that the unified algorithm with a = 1 
+yields an optimal solution. To see this, observe that since 
+A(I') = {T}, only one instance from A(T) u Z(T) may be 
+scheduled in any feasible solution, hence bopt = 1. In addi- 
+tion, Wmi n = Wmax = 1, so bmax = 1. Thus the performance 
+guarantee is bmax/bopt = 1. 
+Interval scheduling. In this problem, each activity consists 
+of a set of instances that are explicitly specified (see, e.g., 
+[9, 10, 18]). This time we use the general bound bopt = 
+1 + c~ and set a = 1 so as to maximize Expression 1, given 
+that Wmi n ---- Wraax = 1. By Lemma 3.2 the performance 
+guarantee is 1/2. 
+Maximum weight throughput. Here activities are specified 
+as time windows. This is exactly the problem of maximiz- 
+ing the weighted throughput of jobs with release times and 
+deadlines on a single machine considered in [5]. Since the 
+only difference between this problem and the previous one 
+is that that the instances are not listed explicitly, we get a 
+performance guarantee of (1 - e)/2. 
+3.2.2 Parallel machine scheduling 
+Here we assume that the resource is a set of k parallel ma- 
+chines. There are two sub-cases to this problem: identical 
+machines where each activity instance may be assigned to 
+any of the k machines, and unrelated machines where each 
+activity instance specifies a particular machine on which it 
+may be scheduled. (In case an instance may be scheduled 
+on several machines we simply replicate the instance once 
+for each machine.) 
+Note that our general framework does not capture this 
+problem completely, since it does not model the condition 
+that every activity must be carried out in its entirety on a 
+single machine. We now argue that the solution returned by 
+our algorithm will never force us to split an activity among 
+several machines. This is clearly the case for unrelated ma- 
+chines since in this sub-case each activity instance specifies 
+a single machine. In the case of identical machines, given a 
+schedule returned by our algorithm, we consider the activ- 
+ity instances in the schedule in non-decreasing order of their 
+start-times, and assign each activity to an arbitrary avail- 
+able machine. The feasibility of the schedule guarantees that 
+at least one machine will always be available. 
+Identical machines. We model this case by setting the 
+width of every instance equal to 1/k. We use a = 1 and 
+bopt < 1 + a = 2. In addition, bmax ~ 1 since any I'- 
+maximal schedule that contains no instance of .A(7) must 
+contain k instances from 27. Thus we get a performance 
+guarantee of 1/2 (or (1 - e)/2 if the activities are specified 
+as time windows). 
+A special case of interest is maximum weight k-colorable 
+subgraph in interval graphs. This is just the case of identical 
+machines with each activity consisting of a single instance. 
+It can be solved precisely in polynomial time via minimum 
+cost flow [2]. Our approach provides a 1/2-approximation 
+factor through a much simpler and faster algorithm. As 
+a matter of fact, the approximation factor for this case is 1 z-17~, since each activity consists of a single instance and 
+thus bopt ~ 1 q- kk-----L1. 
+739 
+
+
+===== PAGE 6 =====
+Unrelated machines. We model this problem by the con- 
+dition w(I) = 1 for all instances I, and modifying the def- 
+inition of Z(I') as follows. We define Z(~) as the set of in- 
+stances intersecting ~ that belong to other activities and can 
+be scheduled only on the same machine as 7. In addition, 
+we use the following criterion in the schedule construction 
+phase. An instance may be added to the schedule if the 
+activity to which it belongs is not currently represented in 
+the schedule and the instance does not intersect any other 
+instance already in the schedule that belongs on the same 
+machine. It is easy to see that the analysis for the case of 
+single machine scheduling carries over to this problem and 
+thus we have a performance guarantee of 1/2 (or (1 - e)/2 
+for time windows). 
+3.2.3 Bandwidth Allocation 
+We consider a scenario in which the bandwidth of a com- 
+munication channel must be allocated to sessions. Here the 
+resource is the channel's bandwidth and the activities are 
+sessions to be routed through the channel. The sessions 
+may be specified in either of two ways: (1) discrete input 
+that lists for each call a set of intervals in which it can be 
+scheduled, together with a width requirement and a profit 
+for each such interval, or (2) continuous input that uses time 
+windows. 
+Suppose all instances are narrow, i.e., have width at most 
+1/2. Then, we use a = 2 so as to maximize Expression 1, 
+given that Wmax _~ 1/2 and Wmi n -- 0. Hence, Lemma 3.2 
+provides a performance guarantee of 1/3 (or (1 -~)/3 in the 
+continuous case). 
+Next, suppose all instances are wide, i.e., have weight 
+greater than 1/2. Then the problem reduces to interval 
+scheduling (or, in the case of continuous input, to maxi- 
+mum weight throughput on a single machine) since no pair 
+of intersecting instances may be scheduled together. Thus, 
+we have a performance guarantee of 1/2 (or (1 - e)/2). 
+Finally, to solve the problem in the general case we solve 
+it separately for the narrow instances and for the wide in- 
+stances, and return the solution of greater profit. Since ei- 
+ther the optimum for the narrow instances is at least three 
+fifths of the optimum (for the original problem), or the opti- 
+mum for the wide jobs is at least two fifths of the optimum, 
+the schedule returned is a 1/5-approximation (or (1 - e)/5). 
+As with machine scheduling, we can extend this problem 
+to k unrelated channels, possibly with different widths, such 
+that each activity instance may only be assigned to one par- 
+ticular channel. As with machine scheduling, the method of 
+solution and the approximation factors carry over from the 
+single channel case. 
+3.3 Implementation Issues 
+Observe that the algorithm may be implemented iteratively 
+rather than recursively. At each iteration we delete all in- 
+stances with non-positive profit; find I', .A(~), and Z(Y); 
+compute pl(I) and perform p(I) 6- p(I) -p,(I) for all 
+I E .A(~) U Z(I'); and push ~ onto a stack. We iterate un- 
+til no instances remain. We then construct the schedule 
+by popping the activity instances off the stack and adding 
+each to the current schedule if doing so does not violate the 
+feasibility of the schedule. 
+A straightforward implementation of this algorithm (when 
+instances are given explicitly and not as time windows) runs 
+in ®(n 2) time, where n is the number of instances. The bot- 
+tleneck is the need to update the profits of the instances in 
+.A(I') u2:(I'): in the worst case the ith iteration updates the 
+profits of n - i instances. The determination of 7 and 2:(~) 
+also requires O(n 2) time, as does the construction of the 
+schedule. 
+A closer look at the algorithm reveals that the sole pur- 
+pose of the stack is to reverse the order in which instances 
+are considered in the schedule construction phase. What the 
+algorithm really does is an initial phase, in which it scans the 
+instances in non-decreasing end-time order, deleting some of 
+them as it goes along, and a second phase, in which it scans 
+the surviving instances in reverse order and constructs the 
+schedule. Rather than using a stack, we can accomplish this 
+by sorting the instances in a list and traversing it in both 
+directions. This idea is only one step shy of the more pow- 
+erful sweep-line approach, which can reduce the worst case 
+time complexity to O(nlog n), as we now describe. 
+The time interval of each instance has two endpoints. We 
+denote the instance to which endpoint t belongs by I(t). We 
+sort the 2n endpoints of the instances in a list (tl, t2,..., t2n) 
+such that i < j if ti < tj or if ti = tj and ti is the end-time 
+of I(t,) and tj is the start-time of I(tj). (Otherwise, ties are 
+broken arbitrarily.) We then consider the endpoints in or- 
+der, reducing profits as we go along and deleting an instance 
+(i.e., deleting its two endpoints from the list) whenever its 
+profit is found to be non-positive. Note that profits never 
+increase, so there is no need to delete the instance the mo- 
+ment its profit drops to zero or less. Instead, we wait with 
+the deletion until the end-time of the instance is encoun- 
+tered. 
+The pseudo-code below implements the sweep-line idea 
+(though it does not achieve the promised O(nlogn) time 
+complexity). For each instance I it uses a variable 7rz in 
+which it holds the current profit of I. The value of rri is 
+maintained correctly only as long as I is alive, that is, as 
+long as I would still be part of the input in the recursive al- 
+gorithm. To avoid confusion we stress that p(I) denotes the 
+original profit of instance I given in the input, as opposed 
+to 7rz which is the "current" profit. 
+1. Do rrz 4-- p(I) for all I, as well as other initializations. 
+2. Sort the endpoints as described above. 
+3. For i 4- 1,2,...,2n : 
+4. I 4- I(tl). 
+5. If ti is the start-time of [ : do nothing. 
+6. Else (t/ is the end-time of I): 
+7. P 4- 7ri. 
+8. If P < 0 : delete I. 
+9. Else: 
+10. For all J E A(I) : ~s 4- ~J - P. 
+11. For all J E Z(I): 7rd 4- 7rj-a.w(a).P. 
+The updating of profits still takes O(n 2) time in the worst 
+case. We can reduce this to linear time by representing the 
+profit function implicitly instead of using the variables 7rx. 
+(The initial sorting still runs in O(n log n) time.) With each 
+activity ,4 we associate a variable A4 and with each instance 
+I we associate a variable AI. In addition, we maintain a 
+variable Ap. All of these variables are initially set to 0. We 
+represent the profits as follows. The current profit of a live 
+instance I E ,4 is p(I) - AA if neither endpoint of I has been 
+encountered, and it is p( I) - A ~ _ a . w( l)( A p -- A A ) + A I 
+if its start-time has already been seen but its end-time has 
+not. We modify the algorithm as follows. We replace "do 
+nothing" in Line 5 with /Xx 4- a • w(I)(Ap -- AA) and we 
+replace: Line 7 by P 4- p(I) - A.a - a. w(I)(A p -- A A) + hi; 
+Line 10 by AA( D 4- AAU ) A-P; and Line 11 by Ap 4- 
+Ap+P. 
+740 
+
+
+===== PAGE 7 =====
+When the traversal of the list is complete, we traverse the 
+surviving endpoints in reverse direction and construct the 
+schedule S. We maintain a variable W and the following 
+invariant: when endpoint t is reached, W holds the total 
+width of instances containing t which have been added to S. 
+12. S +-- O. 
+13. W+-0. 
+14. Traverse the list backwards. For each endpoint t : 
+15. I ~ I(t). 
+16. If t is the end-time of I : 
+17. IfW+w(I)< 1: 
+18. S <-- S U {I}. 
+19. W ~ W + w(I). 
+20. Delete the endpoints of the instances 
+in .A(I) - {/}. 
+21. Else: delete the endpoints of I. 
+22. Else (t is the start-time of I): W +-- W - w(I). 
+3.3.1 Time Windows 
+In this section we refer to the straightforward stack-based 
+iterative implementation of the algorithm described above. 
+We use p(.) to denote the original profits and rr(.) to denote 
+the profits as they change throughout the execution of the 
+algorithm. 
+When the input is in the form of time windows, we do not 
+modify the profit of individual instances, but rather operate 
+on whole windows at a time. At each iteration we delete all 
+windows whose instances have non-positive profit, and find 
+an instance 7 with earliest end-time among the remaining 
+instances by considering s(T) + 1(7") for all remaining win- 
+dows 7-. We push I" on the stack and update the profits of 
+the instances in A(I')UZ(I'). Note that to update the profits 
+of instances in Z(7) and still maintain the property that the 
+profits of all instances in the same time window are the same 
+we might need to first split some windows, as follows. The 
+instances in Z(~) constitute a collection of windows 7- obey- 
+ing e(T) > e(I'). For each such window 7-, if e(7-) = e(" D 
+we reduce rr(T). Otherwise, we split T into two windows 
+7-' = [s(7-), e(~)) and the remainder 7-" = 7-- 7-', and re- 
+duce 7r(7-'). We refer to this implementation as the precise 
+algorithm. It is easy to see that the points at which the 
+time windows may be split are all of the form: start-time of 
+some window plus a finite sum of lengths of instances (not 
+necessarily of the same activity). Since any such point can 
+be no greater than the maximum end-time of an instance, 
+there are only finitely many such points. Thus, our algo- 
+rithm always halts in finite, if super-polynomial, time. 
+In order to attain polynomial running time we trade 
+accuracy for speed. For any fixed 0 < e < 1 we modify 
+the algorithm as follows. Whenever I" is chosen such that 
+0 < rr(~) < ¢p(l") we simply delete the window containing 
+I" and do not alter any profits. We call such an iteration 
+empty. We refer to this algorithm as the profit truncating 
+algorithm. 
+Let us analyze the running time of the profit truncat- 
+ing algorithm. We denote by n the number of windows in 
+the input and introduce the following terminology. When 
+a window 7- is split into 7-' and 7-" we say that one new 
+window is created. We consider the original windows (in the 
+input) to have been created initially. Also, for a given it- 
+eration, we say that I" is selected in that iteration. Recall 
+that time windows are split in such a way that the profits 
+of all instances in the same window are the same. Hence, 
+the algorithm deletes at least one window in each iteration, 
+so the number of iterations is bounded by the number of 
+windows ever created. Because of the manner in which new 
+windows are created, it is obvious that any time instant may 
+belong to at most n different windows, and thus the number 
+of new windows created in the course of any single itera- 
+tion is at most n - 1. To bound the number of windows 
+ever created we therefore bound the number of non-empty 
+iterations, since new windows can only be created in these 
+iterations. Consider an original time window T given in the 
+input. How many times can the algorithm select an instance 
+belonging (originally) to T in non-empty iterations? Each 
+time it does so, rr(7) > ep(" D = ep(7-), since the iteration is 
+non-empty. During the iteration the profits of all instances 
+in ~4(I') decrease by rr(I'). In particular, the profit of every 
+surviving instance originally belonging to T drops by no less 
+than ep(7-). Thus, at most 1/e such iterations may occur. It 
+follows that the total number of non-empty iterations is at 
+most n/e. Hence, the number of windows ever created is at 
+most n + n(n - 1)/e < n2/e and this bounds the total num- 
+ber of iterations. The algorithm can be implemented such 
+that the amortized time complexity of an iteration is O(1) if 
+it is empty and O(n) if it is not, resulting in an overall time 
+complexity of O(n2/e) for the first phase. Since only non- 
+empty iterations push instances on the stack, and precisely 
+one instance is pushed in each such iteration, the size of the 
+stack cannot exceed n/6. Thus a straightforward implemen- 
+tation of the second phase also requires O(n2/e) time, since 
+the size of the schedule is never greater than n. Thus, the 
+time complexity of the entire algorithm is O(n2/e). 
+We now analyze how the profit truncation affects the 
+performance guarantee. For a given input, consider the 
+time windows that the algorithm deletes in the course of 
+its execution. Every deleted window is derived, by zero or 
+more splitting operations, from a window originally present 
+in the input. Without loss of generality let us assume that 
+the algorithm never splits any windows (for we can always 
+partition each window into its constituent deleted windows 
+before commencing execution). We say that window T is 
+bad if the algorithm deletes it in an empty iteration. Let 
+eT- be the value of ~r(T) when bad window T is selected. 
+Consider the following two scenarios. In the first scenario 
+we run the profit truncating algorithm on the original input, 
+and in the second scenario we change the profit of each bad 
+window 7- to p(7-) - ¢7- and then run the precise algorithm. 
+It is easy to see that the precise algorithm in the second sce- 
+nario can be made to run identically as the profit truncating 
+algorithm in the first, except that at all times the profit of 
+every undeleted bad window T in the first scenario will be 
+higher by eT- than its profit in the second scenario. It fol- 
+lows that the schedule S obtained in the first scenario can 
+also be obtained in the second. Let popt and P/opt denote 
+the optimum profit in the first and second scenarios, respec- 
+tively, and for every feasible schedule X', let p(X) and p'(X') 
+be the profits of .l' in both scenarios, respectively. Then, 
+by construction, p(X) > p'(X) > (1 - e)p(X) for all feasible 
+schedules X. It follows that Popt > (1 - e)Popt. Let r be 
+a performance guarantee for the p~ecise algorithm. Then 
+p(S) > p'(S) > r. P~pt _> r(1 - e)Popt, and thus we have a 
+performance guarantee of r(1 - e) for the profit truncating 
+algorithm. 
+741 
+
+
+===== PAGE 8 =====
+4 Loss Minimization 
+In the loss minimization problem the objective is to mini- 
+mize the profit lost to unscheduled activities. In this con- 
+text, we find it more appropriate to refer to penalty incurred 
+rather than to profit lost. Hence we associate a penalty with 
+each activity, and our objective is to find a feasible schedule 
+of minimum penalty, where the penalty of a schedule is the 
+sum of penalties of the activities not in the schedule. Our 
+framework cannot model this type of penalty function in 
+general. It can only model it in the special case where each 
+activity contains a single instance. We therefore restrict the 
+discussion to this case. 
+We actually solve a generalization of the problem in which 
+the amount of resource may vary with time. Thus, the in- 
+put consists of the activity specification as well as a positive 
+function Width(t) specifying the width (i.e., amount of re- 
+source) available at every time instant t. Accordingly, we 
+allow arbitrary positive instance widths. A schedule is fea- 
+sible if for all time instants t, the total width of instances in 
+the schedule containing t is at most Width(t). 
+Strictly speaking, for the problem to fit in the frame- 
+work of the Local Ratio Theorem, we should define feasible 
+solutions to be complements of feasible schedules. We find 
+it easier, though, to keep thinking of schedules as solutions 
+and we retain this view in the following exposition. 
+We present a variant of the Unified Algorithm achieving 
+a performance guarantee of 4. Let (7/,p) denote the input, 
+where 7/ is the description of the activities excluding the 
+penalties, and p is the penalty function. If all the instances 
+in 7/constitute a feasible schedule, we return this schedule. 
+Otherwise, we decompose p by p = pl + p2 (as described in 
+the next paragraph) such that p2(I) > 0 for all instances I, 
+with equality for at least one instance. We solve recursively 
+(7/',pJ, where 7/' is obtained from 7/ by deleting all in- 
+stances whose p2-penalty is 0, and obtain a schedule S'. We 
+then consider the instances in 7/- 7/' in arbitrary order and 
+add each to the schedule iff doing so retains the feasibility 
+of the schedule. We return the schedule S thus constructed. 
+Let us define the decomposition of p by showing how 
+to compute pl. For a given time instant t, let Z(t) be the 
+set of intervals containing t. Define A(t) = ~z~z(t) w(I) - 
+Width(t). To compute pl, find t* maximizing A(.) and let 
+A* = A(t*). Assuming A* > 0, (otherwise the schedule 
+containing all instances is feasible) let 
+min{A*, w(I)} I E :Z(t*), 
+Pa (1) = p" 0 otherwise, 
+where p (which depends on t*) is the unique scaler result- 
+ing in non-negative p2-penalties for all instances and zero 
+p2-penalty for at least one of them. A straightforward im- 
+plementation of this algorithm runs in time polynomial in 
+the number of activities and the number of time instants at 
+which Width(t) changes value. 
+To analyze the algorithm, assume (by induction) that 
+S' is a 4-approximation for (7/',p2). It follows that S is a 
+4-approximation for (7/,p2). Observe (by induction on the 
+recursion) that S is maximal in the sense that adding any 
+instance to it violates its feasibility. Thus, by the Local Ra- 
+tio Theorem, it suffices to show that every maximal feasible 
+schedule is a 4-approximation for (7/,pl). 
+Observation 4.1 Both of the following evaluate to at most 
+pA*: (1) the p~-penalty of any single instance, and (2) the 
+total pl-penalty of any collection of instances whose total 
+width is at most A*. Also, any collection of instances from 
+Z(t*) whose total width is at least A* has a total pl-penalty 
+of at least pA*. 
+Consider an optimal schedule. Its pl-penalty is the sum 
+of the pa-penalties of the instances in Z(t*) that are not in 
+the schedule. Since all of these instance intersect at t* their 
+combined width must be at least A*. Thus, the optimal pl- 
+penalty is at least pA*. Now consider any maximal feasible 
+solution A4. We claim that it is a 4-approximation because 
+its pl-penalty cannot exceed 4pA*. To demonstrate this, 
+consider any time instant t. Let 2vt(t) = Z(t) - A4(t) be the 
+set of instances containing t that are not in the schedule. We 
+say that t is unstable if there is an interval I E A4(t) such 
+that adding I to A4 would violate the width constraint at 
+t. We say that t is unstable because of I. Note that a single 
+time instant may be unstable because of several different 
+instances. 
+Lemma 4.2 [] t is an unstable time instant, then 
+~ze~(t) Pl (I) < 2pA*. 
+Proof: Let J be an instance of maximum width in A4(t). 
+Then, since t is unstable, it is surely unstable because of J. 
+This implies that ~"~eM(t)w(I) > Width(t) - w(J). Recall 
+that A(t) = ~zez(t) w(I)-- Width(t). Thus, ~-~ze~(t) w(I) = 
+~,e~(,) ~(z)-E,~.~(,) < ~(J)+a(t) <_ ~(J)+a*. Hence, 
+~ze~(,) Pl (I) < pA* + pA* = 2pA*. [] 
+Thus, if t* is an unstable point, then the pl-penalty of 
+the schedule is ~1e~(t.)pl(I) < 2pA* and we are done. 
+Otherwise, let tL < t* and tR > t* be the two unstable time 
+instants closest to t* on both sides (it may be that only one 
+of them exists). The maximality of the schedule implies that 
+every interval in ~(t*) is the cause of instability of at least 
+one time instant. Thus each such instance must contain tL 
+or tR (or both). It follows that ~(t*) C "~(tL) I..J'~(tR). Hence, by the previous lemma, the total pl-penalty of these 
+instances is less than 4pA*. 
+4.1 Application: General Caching 
+In the general caching problem, a replacement schedule is 
+sought for a cache that must accommodate pages of vary- 
+ing sizes. The input consists of a fixed cache size S > 0, 
+a collection of pages {1, 2,..., m}, and a sequence of n re- 
+quests for pages. Each page j has a size 0 < s(j) < S and a 
+cost c(j) > 0 associated with loading it into the cache. We 
+assume for convenience that time is discrete and that the 
+ith request is made at time i. (These assumptions cause no 
+loss of generality as will become evident from our solution.) 
+We denote by r(i) the page being requested at time i. A 
+replacement schedule is a specification of the contents of the 
+cache at all times. It must satisfy the following condition. 
+For all 1 < i < n, page r(i) is present in the cache at time i 
+and the sum of sizes of the pages in the cache at that time 
+is not greater than the cache size S. The initial contents 
+of the cache (at time 0) may be chosen arbitrarily. Alter- 
+natively, we may insist that the cache be empty initially. 
+The cost of a given replacement schedule is ~ c(r(i)) where 
+the sum is taken over all i such that r(i) is absent from the 
+cache at time i - 1. The objective is to find a minimum cost 
+replacement schedule. 
+Observe that if we have a replacement schedule that 
+evicts a certain page at some time between two consecutive 
+requests for it, we may as well evict it immediately after the 
+742 
+
+
+===== PAGE 9 =====
+first of these requests and bring it back only for the next 
+request. Thus, we may restrict our attention to schedules in 
+which for every two consecutive requests for a page, either 
+the page remains present in the cache at all times in between 
+the first request and the next, or it is absent from the cache 
+at all times in between. This leads naturally to a descrip- 
+tion of the problem in terms of time intervals, and hence to 
+a straightforward reduction of the problem to our loss min- 
+imization problem (see [1]). For the sake of completeness 
+we recount the reduction shown in [1]. Given an instance 
+of the general caching problem we construct an instance of 
+our loss minimization problem as follows. We define the re- 
+source width by Width(i) = S - s(r(i)) for 1 < i < n, and 
+Width(O) = S (or Width(O) = 0 if we want the cache to be 
+empty initially). We define the activity instances as follows. 
+Consider the request made at time i. Let j be the time at 
+which the previous request for r(i) is made, or j = -1 if no 
+such request is made. If j + 1 < i - 1, we define an activ- 
+ity instance with time interval [3' + 1, i - 1], penalty c(r(i)), 
+and width s(r(i)). The existence of this reduction implies a 
+~'t-approximation algorithm for the general caching problem. 
+5 A Primal-Dual Interpretation 
+Local ratio algorithms can often be reformulated in the primal- 
+dual schema. In this section we demonstrate this for our 
+throughput maximization algorithm. 
+It turns out that the natural primal-dual formulation 
+does not map exactly onto our stack-based iterative algo- 
+rithm of Section 3.3 but rather to the following slightly mod- 
+ified version. Let rr(I) be the current profit of instance I (as 
+opposed to p(I) which denotes its original profit given in 
+the input). The modification is in the definition of Z(7). 
+Our original definition for Z(7) was the set of all instances 
+intersecting I" but belonging to other activities. The new def- 
+inition is the set of all instances intersecting I" (including I" 
+itself). As a result of this change, the profit of each instance 
+I belonging to both .A(I') and Z(I') will now undergo two 
+reductions, one reduction, due to its membership in .A(T) 
+should be by the amount of rr(I'), and the second, due to its 
+membership in Z(I'), by the amount of arr('f )w( I). Doing 
+so, however, will have the undesirable effect of reducing the 
+profit of 7 to the negative value -aTr(I')w(~). We rectify 
+this by scaling the above reductions by 1/(1 + aw(I')), thus 
+ensuring that the profit of I" drops to 0 precisely. It is not dif- 
+ficult to verify that in all cases (except for maximum weight 
+independent set in interval graphs) this does not change the 
+bound ratio bmax/bopt. Thus, our performance guarantees 
+hold for the modified algorithm as well. 
+Recall the integer programming formulation of the prob- 
+lem presented in Section 3. Let us construct the dual pro- 
+gram of the linear relaxation of this program. We define 
+yi as the dual variable corresponding to the constraint on 
+activity .Ai and zt as the dual variable corresponding to the 
+constraint at time t. Let T be the set of all start-times and 
+end-times of all instances belonging to all activities and let 
+Tx = {t 6 T[s(I) < t < e(I)} for all instances I. 
+i=1 tET 
+subject to: 
+V activity instance I 6 A~: y, + w(I) Zt 
+t6T I 
+V i and t: y~, zt 
+> p(0. 
+> 0. 
+In primal-dual terms, our algorithm proceeds as follows. 
+We initially set all dual variables to zero. We say that in- 
+stance I 6 .Ai is positive at a given moment if 
+yi + w( I) ~teTz zt < p( I). At each iteration the algorithm 
+selects an instance I" with minimum end-time among all pos- 
+itive instances. Let s 6 T be maximal such that s < e(I'). 
+Note that by the definition of T~-, s is maximal in T~- as 
+well, and furthermore, every positive instance intersecting I" 
+contains s. Let 
+5= I 
+1 + ~w(7) 
+The algorithm updates: 
+zs +-- z~ + ~5; Yi 4-- yi + 5, 
+and pushes I" on the stack. It iterates until no positive in- 
+stances are left, at which time the dual variables constitute 
+a feasible dual solution. This completes the first phase. In 
+the second phase the algorithm pops each instance in turn 
+of the stack and adds it to the schedule if doing so does not 
+violate the feasibility of the schedule. 
+Using the combinatorial properties of the solution, as we 
+have done in our local ratio analysis of the various problems, 
+we can charge at least 5 units of profit to the profit p(I) of 
+some instance I in the final solution for each increase of 
+(1 + a)5 in the value of the dual objective function. Thus, 
+the profit of the schedule is at least 1/(1 + ~) times the 
+final value of the dual objective function and this is our 
+performance guarantee. 
+6 Contiguous Allocation 
+In problems where a given resource is to be distributed over 
+time among consumers, the resource may be either fungi- 
+ble or nonfungible. Fungible resources are exemplified by 
+the bandwidth allocation application: the "identity" of the 
+bandwidth allocated to the sessions is irrelevant and can 
+change over time. The only constraint is that the total 
+bandwidth allocated at every instant does not exceed the 
+available bandwidth. Nonfungible resources are exemplified 
+by real memory allocation in a multi-threaded programming 
+environment, where chunks of memory are allocated and 
+freed by the various threads. Obviously, the total amount 
+of memory allocated at any moment may not exceed the the 
+amount available. In addition the memory allocated to a 
+thread must be in contiguous addresses and must also re- 
+main in the same position until freed. 
+The general scheduling problem we have been dealing 
+with so far is concerned with fungible resources . In this sec- 
+tion we deal with allocating a resource of the second type, 
+in particular, we consider the problem of dynamic stor- 
+age allocation (DSA). This problem models situations in 
+743 
+
+
+===== PAGE 10 =====
+which allocation has to be contiguous (e.g., contiguous ad- 
+dresses in computer memory or contiguous bands of wave- 
+lengths in wireless communication) and cannot be changed 
+until freed. The terminology used is that of storage allo- 
+cation, i.e., the resource is a contiguous storage area and 
+activities are objects that require storing for different peri- 
+ods of time. We use the term width to refer to the sizes of 
+the storage area and the objects. The traditional goal in 
+DSA has been to store all objects in minimum size storage. 
+This problem is NP-Hard [12]. Kierstead [16] describes an 
+algorithm that uses a block of storage of size at most 6W*, 
+where W* is the maximum over all times t of the sum of 
+the width demands at time t. We use Kierstead's result to 
+achieve an approximation ratio of 1/35 for the throughput 
+maximization version of DSA (with profits associated with 
+successful allocations of storage). In fact, we solve a more 
+general problem in which a single request for storage may of- 
+fer several alternative time intervals, only one of which is to 
+be selected. The duration, storage demand, and profit may 
+all vary among different intervals pertaining to the same re- 
+quest. This is just the bandwidth allocation problem with 
+contiguity requirements thrown in. 
+For simplicity, we normalize the amount of available stor- 
+age to 1. We partition the instances into wide instances, 
+whose widths are more than 1/2, and narrow instances, 
+whose widths are at most 1/2. We solve the bandwidth 
+allocation problem separately for the wide instances and 
+for the narrow instances: we obtain a 1/2-approximation 
+for the wide instances via interval scheduling, and a 1/3- 
+approximation for the narrow instances as we have clone for 
+the bandwidth allocation problem. Let Sw be the solution 
+for the wide instances and Sn the solution for the narrow 
+instances. Observe that Sw is feasible for DSA since no two 
+instances in it intersect. We proceed to extract from Sn a 
+feasible solution for DSA, which we denote by S~, and return 
+the solution with higher profit among Sw and Sn. 
+We obtain S~ from Sn as follows. Given the instances 
+in Sn, we run Kierstead's algorithm [16] and find a DSA 
+solution that fits Sn in a storage block of size 6. We cover 
+this storage block by 11 partially overlapping strips, each of 
+width 1: [0..1], [1/2.. 3/2], [1..2], [3/2..5/2],..., 
+[9/2.. 11/2], [5.. 6]. Since the instances are all narrow, each 
+is covered completely by one (or two) of these strips. Each 
+strip defines a feasible solution for our problem consisting 
+of the set of instances covered completely by the strip. We 
+select S~ as a solution with maximum profit among these 
+solutions. 
+Since the total profit of these solutions is equal to the 
+profit of Sn, which is a 1/3-approximation for bandwidth al- 
+location, the profit of S~ is a 1/33-approximation for band- 
+width allocation. It is also a 1/33-approximation to DSA 
+since the optimum profit for the DSA cannot be higher 
+than the optimum for bandwidth allocation. Since either 
+the profit of S~ is at least 33/35 of the optimum profit for 
+the DSA, or the optimum for Sw is at least 2/35 of the 
+optimum, the better solution among Sw and Sin is a 1/35- 
+approximation. 
+Acknowledgment We thank Sanjeev Khanna for many 
+fruitful discussions and suggestions. 
+References 
+[1] S. ALBERS, A. ARORA, AND S. KHANNA, Page replacement 
+for general caching problems, Proc. 10th Annual ACM- 
+SIAM Symposium on Discrete Algorithms, pp. 31-40, 1999. 
+[2] E.M. ARKIN AND E.B. SmVERBERG, Scheduling jobs with 
+fixed start and end times, Discrete Applied Mathematics, 
+Vol. 18, pp. 1-8, 1987. 
+[3] V. BAFNA, P. BERMAN, AND T. FUJITO, A 2-approximation 
+algorithm for the undirected feedback vertex set problem, 
+SIAM J. on Disc. Mathematics, Vol. 12, pp. 289-297, 1999. 
+[4] A. BAR-NOY, R. CANETTI, S. KUTTEN, Y. MANSOUR AND 
+B. SCHIEBER, Competitive bandwidth allocation with pre- 
+emption, SIAM J. on Computing, Vol. 28, pp. 1806-1828, 
+1999. 
+[5] A. BAR-Nov, S. GUHA, J. NAOR, AND B. SCHIEBER, Approx- 
+imating the throughput of multiple machines in reM-time 
+scheduling, Proc. 31st Annual A CM Symposium on Theory 
+of Computing, pp. 622-631, 1999. 
+[6] R. BAR-YEHUDA, One for the price of two: a unified ap- 
+proach for approximating covering problems, to appear, Al- 
+gorithmica. See also Proc. 1st Int. Workshop on Approxima- 
+tion Algorithms ]or Combinatorial Optimization Problems 
+(APPROX), Aalborg, Denmark, July 1998. 
+[7] R. BAR-YEHUDA AND S. EVEN, A local-ratio theorem for 
+approximating the weighted vertex cover problem. Annals 
+o] Discrete Mathematics, Vol. 25, pp. 27-46, 1985. 
+[8] P. BERMAN AND B. DASGUPTA, Improvements in through- 
+put maximization for real-time Scheduling, Proc. 32nd An- 
+nual ACM Symposium on Theory of Computing, 2000. 
+[9] T. ERLEBACH AND K. JANSEN, Maximizing the number 
+of connections in optical tree networks. Proc. Int. Sym- 
+posium on Algorithms and Computation (ISAAC), LNCS 
+1533, pp. 179-188, 1998. 
+[10] W. ERLEBACH AND K. JANSEN, Conversion of coloring al- 
+gorithms into maximum weight independent set algorithms. 
+Unpublished Manuscript, 2000. 
+[11] J.A. GARAY, I.S. GOPAL, S. KUTTEN, Y. MANSOUR AND 
+M. YUNG, Efficient on-line call control algorithms, Journal 
+o] Algorithms, Vol. 23, pp. 180-194, 1997. 
+[12] M. GAREY AND D. JOHNSON, Computers and intractability: 
+a guide to the theory of NP-completeness, W. H. Freeman, 
+San Francisco, 1979. 
+[13] J. GERGOV, Algorithms for compile-time memory optimiza- 
+tion, Proc. lOth Annual ACM-SIAM Symposium on Dis- 
+crete Algorithms, pp. 907-908, 1999. 
+[14] M. GOLUMBIC, Algorithmic graph theory and perfect graphs. 
+Academic Press, New York, 1980. 
+[15] S. KHANNA, personal communication, 1999. 
+[16] H.A. KIERSTEAD, A polynomial time approximation algo- 
+rithm for dynamic storage allocation, Discrete Mathematics, 
+Vol. 88, pp. 231-237, 1991. 
+[17] C. PHILLIPS, R.N. UMA AND J. WEIN, Off-line admission 
+control for general scheduling problems, Proc. 11th Annual 
+ACM-SIAM Symposium on Discrete Algorithms, pp. 879- 
+888, 2000. 
+[18] F.C.R. SPIEKSMA, On the approximability of an interval 
+scheduling problem. Journal of Scheduling, Vol. 2, pp. 215- 
+227, 1999. 
+[19] A. STEINBERG, A Strip-packingalgorithm with absolute per- 
+formance bound 2, SIAM Journal on Computing, Vol. 26, 
+pp. 401-409, 1997. 
+[20] V. VAZIRANI, The primal-dual schema for approximation al- 
+gorithms: where does it stand, and where can it go? Work- 
+shop on Approximation Algorithms for Hard Problems in 
+Combinatorial Optimization, The Fields Institute for Re- 
+search in Mathematical Sciences, September 1999. 
+744 
+
+

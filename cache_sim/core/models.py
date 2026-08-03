@@ -1,6 +1,6 @@
 """对象级缓存（Content Cache）数据模型。
 
-按 ``项目设计.md`` 仅实现对象级缓存：面向 (time, id, size[, extra]) trace，
+对象级缓存：面向 (time, id, size[, extra]) trace，
 按字节容量管理变长对象，统计 OHR（对象命中率）与 BHR（字节命中率）。
 
 trace 记录格式（空格分隔，3 列必需 + 预留 extra 列）：
