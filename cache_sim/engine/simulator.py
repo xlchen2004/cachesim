@@ -100,6 +100,30 @@ class BitModelOnlineSimulator:
         return self.algo.run(trace, self.capacity, self.dataset_name)
 
 
+class LocalRatioCachingSimulator:
+    """General Caching 4-近似（Bar-Noy et al. STOC 2000）专用模拟器。
+
+    算法离线计算完整替换调度（local-ratio + loss-min 归约），不兼容
+    :class:`ContentCache` + ``select_victim`` 接口，故自带顶层循环。
+    本模拟器把 (time, id, size[, extra]) trace 喂给
+    :class:`~cache_sim.algorithms.local_ratio_caching.LocalRatioCaching` 并返回结果。
+
+    算法离线但**非最优**（4-近似），故不置 offline=True；其竞争比由调用方
+    对比 Belady 基线回填（与在线算法一致）。
+    """
+
+    def __init__(self, algo, capacity: int, cost_model: str = "bit",
+                 dataset_name: str = ""):
+        self.algo = algo
+        self.capacity = capacity
+        self.cost_model = cost_model
+        self.dataset_name = dataset_name
+
+    def run(self, trace: Iterable[Tuple]) -> SimulationResult:
+        return self.algo.run(trace, self.capacity, self.cost_model,
+                             self.dataset_name)
+
+
 def compute_competitive_ratio(online: SimulationResult,
                               optimal: SimulationResult) -> float:
     """对象数竞争比 = online_misses / optimal_misses（fault 模型代价比）。

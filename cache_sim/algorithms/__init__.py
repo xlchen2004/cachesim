@@ -4,6 +4,9 @@
 - 标准策略（对象级缓存通用）：lru / lfu / fifo / random / randomized_marking / belady。
 - 论文《Learning-Augmented Bit-Model Caching》Algorithm 1/2/3 的忠实实现：
   bit_model_online（维护缓存状态分布 µ，自带顶层循环，不兼容 select_victim 接口）。
+- 论文《A Unified Approach to Approximating Resource Allocation and Scheduling》
+  (Bar-Noy et al., STOC 2000) §4.1+§4 的 general caching 离线 4-近似：
+  local_ratio_caching（local-ratio + loss-min 归约，自带顶层循环，离线非最优）。
 """
 
 # 导入所有算法模块以触发 @register 装饰器注册
@@ -15,3 +18,4 @@ import cache_sim.algorithms.random_evict  # noqa: F401
 import cache_sim.algorithms.randomized_marking  # noqa: F401
 import cache_sim.algorithms.belady  # noqa: F401
 import cache_sim.algorithms.bit_model_online  # noqa: F401
+import cache_sim.algorithms.local_ratio_caching  # noqa: F401

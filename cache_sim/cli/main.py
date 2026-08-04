@@ -21,7 +21,7 @@ from cache_sim.traceparser.basic_trace import generate_basic_trace
 from cache_sim.traceparser.loader import check_trace, find_dataset_path, iter_requests
 from cache_sim.traceparser.tracegenerator import SyntheticGenerator
 from cache_sim.engine.simulator import (
-    BitModelOnlineSimulator, ContentSimulator,
+    BitModelOnlineSimulator, ContentSimulator, LocalRatioCachingSimulator,
     compute_byte_competitive_ratio, compute_competitive_ratio,
 )
 
@@ -78,6 +78,9 @@ def _print_result(result) -> None:
     fc = result.extra.get("fetch_cost") if result.extra else None
     if fc is not None:
         print(f"bit-model 取回代价: {fc}")
+    gc_cost = result.extra.get("cost") if result.extra else None
+    if gc_cost is not None:
+        print(f"local-ratio-caching reload 代价: {gc_cost}")
     print(f"驱逐次数: {result.evictions}")
     if result.competitive_ratio is not None:
         print(f"对象数竞争比: {result.competitive_ratio:.4f}")
@@ -109,11 +112,16 @@ def _trace_factory(args, path: Optional[Path]):
 
 def _simulate(args, policy, dataset_name, trace_factory):
     is_dist = getattr(policy, "distribution_based", False)
+    is_sched = getattr(policy, "schedule_based", False)
     capacity = args.capacity
     if capacity is None:
         print("错误：对象级缓存需要指定 --capacity", file=sys.stderr)
         sys.exit(1)
-    if is_dist:
+    if is_sched:
+        sim = LocalRatioCachingSimulator(policy, capacity=capacity,
+                                         cost_model=args.cost_model,
+                                         dataset_name=dataset_name)
+    elif is_dist:
         sim = BitModelOnlineSimulator(policy, capacity=capacity, dataset_name=dataset_name)
     else:
         sim = ContentSimulator(policy, capacity=capacity,

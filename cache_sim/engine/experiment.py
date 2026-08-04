@@ -14,7 +14,7 @@ from cache_sim.core.models import SimulationResult
 from cache_sim.traceparser.loader import check_trace, find_dataset_path, iter_requests
 from cache_sim.traceparser.tracegenerator import SyntheticGenerator
 from cache_sim.engine.simulator import (
-    BitModelOnlineSimulator, ContentSimulator,
+    BitModelOnlineSimulator, ContentSimulator, LocalRatioCachingSimulator,
     compute_byte_competitive_ratio, compute_competitive_ratio,
 )
 
@@ -62,8 +62,13 @@ class ExperimentRunner:
         trace_factory = self._trace_factory(ds_cfg)
         policy = get_algorithm(alg_cfg.name, **alg_cfg.params)
         is_dist = getattr(policy, "distribution_based", False)
+        is_sched = getattr(policy, "schedule_based", False)
 
-        if is_dist:
+        if is_sched:
+            sim = LocalRatioCachingSimulator(policy, capacity=cache_size,
+                                             cost_model=ds_cfg.cost_model,
+                                             dataset_name=ds_cfg.name)
+        elif is_dist:
             sim = BitModelOnlineSimulator(policy, capacity=cache_size,
                                           dataset_name=ds_cfg.name)
         else:
@@ -71,8 +76,10 @@ class ExperimentRunner:
                                    cost_model=ds_cfg.cost_model, dataset_name=ds_cfg.name)
         result = sim.run(trace_factory())
 
-        # 竞争比：运行 Belady 基线（在线算法才有意义）；Belady 始终走 ContentSimulator。
-        # 两个竞争比（对象数 / 字节数）对所有在线算法统一计算，不再区分 distribution_based。
+        # 竞争比：运行 Belady 基线（对在线算法与离线非最优算法均有意义）；
+        # Belady 始终走 ContentSimulator。
+        # 两个竞争比（对象数 / 字节数）对所有非“离线最优”算法统一计算。
+        # local_ratio_caching 离线但非最优（4-近似），故也对比 Belady。
         competitive = self.config.competitive or ds_cfg.competitive
         if competitive and not getattr(policy, "offline", False):
             belady = get_algorithm("belady")

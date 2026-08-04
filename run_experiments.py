@@ -15,7 +15,7 @@ from pathlib import Path
 from cache_sim.algorithms.registry import get_algorithm
 from cache_sim.core.models import SimulationResult
 from cache_sim.engine.simulator import (
-    BitModelOnlineSimulator, ContentSimulator,
+    BitModelOnlineSimulator, ContentSimulator, LocalRatioCachingSimulator,
     compute_byte_competitive_ratio, compute_competitive_ratio,
 )
 from cache_sim.traceparser.loader import check_trace, iter_requests
@@ -27,7 +27,7 @@ DATASETS = [
     "wiki2018_test10.csv",
 ]
 PCTS = [1, 2, 5, 10]
-ALGORITHMS = ["belady", "lru", "bit_model_online"]
+ALGORITHMS = ["belady", "lru", "bit_model_online", "local_ratio_caching"]
 TRACE_DIR = Path("traces")
 OUT_DIR = Path("results/multi")
 SEED = 42
@@ -49,6 +49,10 @@ def run_one(alg_name, path, capacity, dataset_name, cost_model="bit"):
     if alg_name == "bit_model_online":
         policy = get_algorithm(alg_name, seed=SEED)
         sim = BitModelOnlineSimulator(policy, capacity=capacity, dataset_name=dataset_name)
+    elif alg_name == "local_ratio_caching":
+        policy = get_algorithm(alg_name)
+        sim = LocalRatioCachingSimulator(policy, capacity=capacity,
+                                         cost_model=cost_model, dataset_name=dataset_name)
     else:
         policy = get_algorithm(alg_name)
         sim = ContentSimulator(policy, capacity=capacity,
@@ -111,7 +115,7 @@ def main():
                       flush=True)
             all_rows.append((ds, pct, capacity, belady_res))
 
-            for alg in ("lru", "bit_model_online"):
+            for alg in ("lru", "bit_model_online", "local_ratio_caching"):
                 t0 = time.time()
                 res, cached = get_result(alg, ds, path, capacity, pct, belady_res)
                 tag = "加载" if cached else "完成"
@@ -145,7 +149,10 @@ def _print_markdown(rows):
         for d, pct, cap, r in rows:
             if d != ds:
                 continue
-            fc = r.extra.get("fetch_cost") if r.extra else None
+            extra = r.extra or {}
+            fc = extra.get("fetch_cost")
+            if fc is None:
+                fc = extra.get("cost")     # local_ratio_caching 的 reload 代价
             fc_s = f"{fc:.0f}" if fc is not None else "-"
             ocr = f"{r.competitive_ratio:.4f}" if r.competitive_ratio is not None else "-"
             bcr = (f"{r.byte_competitive_ratio:.4f}"
